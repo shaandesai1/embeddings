@@ -39,7 +39,9 @@ n_sticks = 8
 gpu_id = 0
 device = torch.device("cuda:"+str(gpu_id) if torch.cuda.is_available() else "cpu")
 if torch.cuda.is_available():
-    print('Using GPU: {} '.format(gpu_id))
+   # print('Using GPU: {} '.format(gpu_id))
+    print('available')
+
 model = UNet().to(device)
 
 
@@ -84,7 +86,7 @@ model_dir = Path('../model')
 
 best_loss = np.inf
 for epoch in range(300):
-    print(f'epoch : {epoch}')
+    #print(f'epoch : {epoch}')
     disc_losses = []
     ce_losses = []
     for batched in train_dataloader:
@@ -115,8 +117,8 @@ for epoch in range(300):
         optimizer.step()
     disc_loss = np.mean(disc_losses)
     ce_loss = np.mean(ce_losses)
-    print(f'DiscriminativeLoss: {disc_loss:.4f}')
-    print(f'CrossEntropyLoss: {ce_loss:.4f}')
+    #print(f'DiscriminativeLoss: {disc_loss:.4f}')
+    #print(f'CrossEntropyLoss: {ce_loss:.4f}')
     scheduler.step(disc_loss)
     if disc_loss < best_loss:
         best_loss = disc_loss

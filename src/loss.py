@@ -123,7 +123,7 @@ class DiscriminativeLoss(_Loss):
             diff = means_a - means_b
 
             margin = 2 * self.delta_dist * (1.0 - torch.eye(n_clusters[i]))
-            margin = Variable(margin)
+            margin = margin.cuda()
             #if self.usegpu:
             #    margin = margin.cuda()
             c_dist = torch.sum(torch.clamp(margin - torch.norm(diff, self.norm, 0), min=0) ** 2)
