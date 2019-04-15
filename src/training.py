@@ -19,18 +19,24 @@ from dataset import CocoDetection
 from loss import DiscriminativeLoss
 
 
+from torch.nn.parallel import DataParallelModel, DataParallelCriterion
+
+parallel_model = DataParallelModel(model)             # Encapsulate the model
+parallel_loss  = DataParallelCriterion(loss_function) # Encapsulate the loss function
+
+
 # Model
-gpu_id = 0
-device = torch.device("cuda:"+str(gpu_id) if torch.cuda.is_available() else "cpu")
-if torch.cuda.is_available():
+#gpu_id = 0
+#device = torch.device("cuda:"+str(gpu_id) if torch.cuda.is_available() else "cpu")
+#if torch.cuda.is_available():
    # print('Using GPU: {} '.format(gpu_id))
-    print('available')
+#    print('available')
 
 
 
 
-
-model = UNet().to(device)
+model = DataParallelModel(model)
+#model = UNet().to(device)
 
 # Dataset for train with sticks
 #train_dataset = SSSDataset(train=True, n_sticks=n_sticks)
