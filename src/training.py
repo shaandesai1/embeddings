@@ -3,7 +3,7 @@
 
 import numpy as np
 from pathlib import Path
-
+from torchvision import transforms
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -19,10 +19,10 @@ from dataset import CocoDetection
 from loss import DiscriminativeLoss
 
 
-from torch.nn.parallel import DataParallelModel, DataParallelCriterion
+from torch.nn.parallel import DataParallel
 
-parallel_model = DataParallelModel(model)             # Encapsulate the model
-parallel_loss  = DataParallelCriterion(loss_function) # Encapsulate the loss function
+#parallel_model = DataParallelModel(model)             # Encapsulate the model
+#parallel_loss  = DataParallelCriterion(loss_function) # Encapsulate the loss function
 
 
 # Model
@@ -35,7 +35,7 @@ parallel_loss  = DataParallelCriterion(loss_function) # Encapsulate the loss fun
 
 
 
-model = DataParallelModel(model)
+model = DataParallel(UNet())
 #model = UNet().to(device)
 
 # Dataset for train with sticks
@@ -45,7 +45,7 @@ model = DataParallelModel(model)
 
 #coco dataset training
 
-train_df = CocoDetection('/data/shaan/train2017','/data/shaan/annotations/instances_train2017.json',transform = transforms.toTensor(),target_transform=transforms.toTensor())
+train_df = CocoDetection('/data/shaan/train2017','/data/shaan/annotations/instances_train2017.json',transform = transforms.ToTensor(),target_transform=transforms.ToTensor())
 
 train_dataloader = DataLoader(train_df, batch_size = 32, shuffle = True, num_workers = 2)
 
@@ -89,8 +89,10 @@ for epoch in range(300):
     #ce_losses = []
     for batched in train_dataloader:
         images, ins_labels = batched
-        images = images.to(device)
-        ins_labels = ins_labels.to(device)
+ #       images = images.to(device)
+ #       ins_labels = ins_labels.to(device)
+        images = images.float()
+        ins_labels = ins_labels.float()
         model.zero_grad()
 
         ins_predict = model(images)

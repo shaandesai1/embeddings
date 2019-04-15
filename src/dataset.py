@@ -6,6 +6,11 @@ from torch.utils.data import Dataset
 from pycocotools.coco import COCO
 import os
 
+from PIL import Image, ImageOps
+import PIL
+from skimage.transform import resize
+from pycocotools.coco import COCO
+
 class SSSDataset(Dataset):
     def __init__(self, train, n_sticks=8, data_size=512):
         super().__init__()
@@ -127,6 +132,7 @@ class CocoDetection(Dataset):
             bgnd.append(resized)
             target.append(resized)
         bgnd = sum(bgnd)
+        bgnd = np.array(bgnd).ravel()
         bgnd[np.nonzero(bgnd)] = 1
         bgnd = 1 - bgnd
         target.append(bgnd)
@@ -165,7 +171,7 @@ class CocoDetection(Dataset):
             img = self.transform(img)
         
         if self.target_transform is not None:
-            target = self.target_transform(target)
+            pass
         return img, target
     
     

@@ -15,7 +15,7 @@ class DiscriminativeLoss(_Loss):
                  norm=2, alpha=1.0, beta=1.0, gamma=0.001,
                  usegpu=True, size_average=True):
         super(DiscriminativeLoss, self).__init__(size_average)
-        self.delta_var = delta_varpy
+        self.delta_var = delta_var
         self.delta_dist = delta_dist
         self.norm = norm
         self.alpha = alpha
