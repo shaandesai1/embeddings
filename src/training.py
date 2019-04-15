@@ -1,9 +1,6 @@
 
 # coding: utf-8
 
-# In[1]:
-
-
 import numpy as np
 from pathlib import Path
 
@@ -13,26 +10,13 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from torch.autograd import Variable
-
-
-# In[2]:
-
-
 import sys
 sys.path.append('../src/')
 
 from model import UNet
 from dataset import SSSDataset
+from dataset import CocoDetection
 from loss import DiscriminativeLoss
-
-
-# In[3]:
-
-
-n_sticks = 8
-
-
-# In[4]:
 
 
 # Model
@@ -42,19 +26,27 @@ if torch.cuda.is_available():
    # print('Using GPU: {} '.format(gpu_id))
     print('available')
 
+
+
+
+
 model = UNet().to(device)
 
+# Dataset for train with sticks
+#train_dataset = SSSDataset(train=True, n_sticks=n_sticks)
+#train_dataloader = DataLoader(train_dataset, batch_size=4,
+#                              shuffle=False, num_workers=0, pin_memory=True)
 
-# In[5]:
+#coco dataset training
 
+train_df = CocoDetection('/data/shaan/train2017','/data/shaan/annotations/instances_train2017.json',transform = transforms.toTensor(),target_transform=transforms.toTensor())
 
-# Dataset for train
-train_dataset = SSSDataset(train=True, n_sticks=n_sticks)
-train_dataloader = DataLoader(train_dataset, batch_size=4,
-                              shuffle=False, num_workers=0, pin_memory=True)
+train_dataloader = DataLoader(train_df, batch_size = 32, shuffle = True, num_workers = 2)
 
+#val_df = CocoDetection('/data/shaan/val2017','/data/shaan/annotations/instances_val2017.json',transform = transforms.toTensor(),target_transform=transforms.toTensor())
 
-# In[6]:
+#val_df = CocoDetection('/data/shaan/test2017','/data/shaan/annotations/instances_test2017.json',transform = transforms.toTensor(),target_transform=transforms.toTensor())
+
 
 
 # Loss Function
@@ -62,7 +54,7 @@ criterion_disc = DiscriminativeLoss(delta_var=0.5,
                                     delta_dist=1.5,
                                     norm=2,
                                     usegpu=True)
-criterion_ce = nn.CrossEntropyLoss()
+#criterion_ce = nn.CrossEntropyLoss()
 
 
 # In[7]:
@@ -88,35 +80,30 @@ best_loss = np.inf
 for epoch in range(300):
     #print(f'epoch : {epoch}')
     disc_losses = []
-    ce_losses = []
+    #ce_losses = []
     for batched in train_dataloader:
-        images, sem_labels, ins_labels = batched
+        images, ins_labels = batched
         images = images.to(device)
-        sem_labels = sem_labels.to(device)
         ins_labels = ins_labels.to(device)
         model.zero_grad()
 
-        sem_predict, ins_predict = model(images)
+        ins_predict = model(images)
         loss = 0
 
+        
+        
         # Discriminative Loss
         disc_loss = criterion_disc(ins_predict,
                                    ins_labels,
-                                   [n_sticks] * len(images))
+                                   [92] * len(images))
         loss += disc_loss
         disc_losses.append(disc_loss.cpu().data.tolist())
 
-        # Cross Entropy Loss
-        _, sem_labels_ce = sem_labels.max(1)
-        ce_loss = criterion_ce(sem_predict.permute(0, 2, 3, 1)                                   .contiguous().view(-1, 2),
-                               sem_labels_ce.view(-1))
-        loss += ce_loss
-        ce_losses.append(ce_loss.cpu().data.tolist())
-
+    
         loss.backward()
         optimizer.step()
+
     disc_loss = np.mean(disc_losses)
-    ce_loss = np.mean(ce_losses)
     #print(f'DiscriminativeLoss: {disc_loss:.4f}')
     #print(f'CrossEntropyLoss: {ce_loss:.4f}')
     scheduler.step(disc_loss)
