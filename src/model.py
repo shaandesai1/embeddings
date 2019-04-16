@@ -51,18 +51,21 @@ class down(nn.Module):
 class up(nn.Module):
     def __init__(self, in_ch, out_ch, bilinear=True):
         super(up, self).__init__()
-
+        self.bilin = bilinear
         #  would be a nice idea if the upsampling could be learned too,
         #  but my machine do not have enough memory to handle all those weights
         if bilinear:
-            self.up = nn.Upsample(scale_factor=2, mode='bilinear')
+            self.up = nn.functional.interpolate
         else:
             self.up = nn.ConvTranspose2d(in_ch, out_ch, 2, stride=2)
 
         self.conv = double_conv(in_ch, out_ch)
 
     def forward(self, x1, x2):
-        x1 = self.up(x1)
+        if self.bilin:
+            x1 = self.up(x1,scale_factor=2,mode='bilinear')
+        else:
+            x1 = self.up(x1)
         diffX = x1.size()[2] - x2.size()[2]
         diffY = x1.size()[3] - x2.size()[3]
         x2 = F.pad(x2, (diffX // 2, int(diffX / 2),
@@ -113,6 +116,5 @@ class UNet(nn.Module):
         x = self.up2(x, x3)
         x = self.up3(x, x2)
         x = self.up4(x, x1)
-        #sem = self.sem_out(x)
         ins = self.ins_out(x)
         return  ins

@@ -19,25 +19,20 @@ from dataset import CocoDetection
 from loss import DiscriminativeLoss
 
 
-from torch.nn.parallel import DataParallel
+from torch.nn import DataParallel
 
-#parallel_model = DataParallelModel(model)             # Encapsulate the model
-#parallel_loss  = DataParallelCriterion(loss_function) # Encapsulate the loss function
 
 
 # Model
-#gpu_id = 0
-#device = torch.device("cuda:"+str(gpu_id) if torch.cuda.is_available() else "cpu")
-#if torch.cuda.is_available():
-   # print('Using GPU: {} '.format(gpu_id))
-#    print('available')
+gpu_id = 0
+device = torch.device("cuda:"+str(gpu_id) if torch.cuda.is_available() else "cpu")
+if torch.cuda.device_count() > 1:
+    print('using gpus')
+    model = DataParallel(UNet(),device_ids=range(torch.cuda.device_count()))
 
-
-
-
-model = DataParallel(UNet())
+#print(torch.cuda.device_count())
 #model = UNet().to(device)
-
+model.to(device)
 # Dataset for train with sticks
 #train_dataset = SSSDataset(train=True, n_sticks=n_sticks)
 #train_dataloader = DataLoader(train_dataset, batch_size=4,
@@ -47,7 +42,7 @@ model = DataParallel(UNet())
 
 train_df = CocoDetection('/data/shaan/train2017','/data/shaan/annotations/instances_train2017.json',transform = transforms.ToTensor(),target_transform=transforms.ToTensor())
 
-train_dataloader = DataLoader(train_df, batch_size = 32, shuffle = True, num_workers = 2)
+train_dataloader = DataLoader(train_df, batch_size = 4, shuffle = True, num_workers = 2)
 
 #val_df = CocoDetection('/data/shaan/val2017','/data/shaan/annotations/instances_val2017.json',transform = transforms.toTensor(),target_transform=transforms.toTensor())
 
@@ -83,16 +78,17 @@ scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer,
 model_dir = 'model'
 
 best_loss = np.inf
-for epoch in range(300):
+for epoch in range(4):
     #print(f'epoch : {epoch}')
     disc_losses = []
-    #ce_losses = []
+    print('epoch')#ce_losses = []
     for batched in train_dataloader:
+        print('batch')
         images, ins_labels = batched
  #       images = images.to(device)
  #       ins_labels = ins_labels.to(device)
-        images = images.float()
-        ins_labels = ins_labels.float()
+        images = images.float().to(device)
+        ins_labels = ins_labels.float().to(device)
         model.zero_grad()
 
         ins_predict = model(images)
