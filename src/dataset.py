@@ -85,22 +85,22 @@ class CocoDetection(Dataset):
         global_classes = 40
         self.global_classes = global_classes
         rejects = []
-        arr = list(self.coco.imgs.keys())
+        #arr = list(self.coco.imgs.keys())
         
         #find the ids which have an instances!
-        for i,val in enumerate(arr):
-            annIds = self.coco.getAnnIds(imgIds=val)
-            anns = self.coco.loadAnns(annIds)
-            if anns == []:
-                rejects.append(val)
-                ctr+=1
-        print(ctr)
-        self.ids = list(set(arr) - set(rejects))
+ #       for i,val in enumerate(arr):
+ #           annIds = self.coco.getAnnIds(imgIds=val)
+ #           anns = self.coco.loadAnns(annIds)
+ #           if anns == []:
+ #               rejects.append(val)
+ #               ctr+=1
+ #       print(ctr)
+ #       self.ids = list(set(arr) - set(rejects))
 
 
 
         #find the top 'globalclasses' categories and their ids
-        cats = self.coco.loadCats(coco.getCatIds())
+        cats = self.coco.loadCats(self.coco.getCatIds())
         nms=[cat['name'] for cat in cats]
         idset = []
         catcount = []
@@ -111,12 +111,21 @@ class CocoDetection(Dataset):
             catcount.append(len(imgIds))
 
         indices = np.argsort(catcount)[-global_classes:]
-        init_ids = idset[ids[0]]
+        init_ids = idset[indices[0]]
 
         for i in range(1,global_classes):
-            init_ids = list(set().union(init_ids,idset[ids[i]]))
+            init_ids = list(set().union(init_ids,idset[indices[i]]))
 
-        self.ids = set(self.ids).intersection(init_ids)
+        #self.ids = list(set(self.ids).intersection(init_ids))
+        for i,val in enumerate(init_ids):
+            annIds = self.coco.getAnnIds(imgIds=val)
+            anns = self.coco.loadAnns(annIds)
+            if anns == []:
+                rejects.append(val)
+                ctr+=1
+        print(ctr)
+        self.ids = list(set(init_ids) - set(rejects))
+
 
         indices = np.flip(np.argsort(catcount)[-global_classes:])
         dct = {}
@@ -125,6 +134,8 @@ class CocoDetection(Dataset):
             dct[indices[i]] = 1 + i 
 
         self.reindex = dct
+
+        print(len(self.ids))
     def __getitem__(self, index):
         """
             Args:
@@ -166,8 +177,10 @@ class CocoDetection(Dataset):
         #resizing the target masks + adding background mask
         target = []
         bgnd = []
+        new_anns = []       
         for i in range(len(anns)):
             if anns[i]['category_id'] in self.reindex:
+                new_anns.append(self.reindex[anns[i]['category_id']])
                 arr_img = coco.annToMask(anns[i])
                 resized = cv2.resize(arr_img,dsize=(shap[1],shap[0]),interpolation=cv2.INTER_NEAREST)
                 if np.max(resized) != 1:
@@ -191,7 +204,7 @@ class CocoDetection(Dataset):
         
         img = ImageOps.expand(img, padding)
         
-        for i in range(len(anns)+1):
+        for i in range(len(target)):
             if sz[0] > sz[1]:
                 target[i] = cv2.copyMakeBorder(target[i],0,0,pad_left,pad_right,cv2.BORDER_CONSTANT,value=0)
             else:
@@ -202,9 +215,9 @@ class CocoDetection(Dataset):
         
         new_target = np.zeros((self.global_classes+1,256,256))
         
-        for i in range(len(anns)):
+        for i in range(len(target)-1):
             #new_target = new_target + target[i,:,:]*anns[i]['category_id']
-            new_target[reindex[anns[i]['category_id']],:,:] = new_target[reindex[anns[i]['category_id']],:,:] + target[i,:,:]
+            new_target[new_anns[i],:,:] = new_target[new_anns[i],:,:] + target[i,:,:]
         new_target[0,:,:] = new_target[0,:,:] + target[i+1,:,:]
         target = torch.from_numpy(new_target)
         

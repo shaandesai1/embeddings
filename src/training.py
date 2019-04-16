@@ -99,7 +99,7 @@ for epoch in range(4):
         # Discriminative Loss
         disc_loss = criterion_disc(ins_predict,
                                    ins_labels,
-                                   [92] * len(images))
+                                   [41] * len(images))
         loss += disc_loss
         disc_losses.append(disc_loss.cpu().data.tolist())
 
