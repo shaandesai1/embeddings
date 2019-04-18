@@ -17,9 +17,52 @@ from model import UNet
 from dataset import SSSDataset
 from dataset import CocoDetection
 from loss import DiscriminativeLoss
+import torchvision.models as models
 
 
 from torch.nn import DataParallel
+
+
+
+vgg13 = models.vgg13(pretrained=True)
+model = UNet()
+
+dctvgg = vgg13.state_dict()
+dct = model.state_dict()
+
+dct['inc.conv.conv.0.weight'].data.copy_(dctvgg['features.0.weight'])
+dct['inc.conv.conv.0.bias'].data.copy_(dctvgg['features.0.bias'])
+
+dct['inc.conv.conv.3.weight'].data.copy_(dctvgg['features.2.weight'])
+dct['inc.conv.conv.3.bias'].data.copy_(dctvgg['features.2.bias'])
+
+dct['down1.mpconv.1.conv.0.weight'].data.copy_(dctvgg['features.5.weight'])
+dct['down1.mpconv.1.conv.0.bias'].data.copy_(dctvgg['features.5.bias'])
+
+dct['down1.mpconv.1.conv.3.weight'].data.copy_(dctvgg['features.7.weight'])
+dct['down1.mpconv.1.conv.3.bias'].data.copy_(dctvgg['features.7.bias'])
+
+dct['down2.mpconv.1.conv.0.weight'].data.copy_(dctvgg['features.10.weight'])
+dct['down2.mpconv.1.conv.0.bias'].data.copy_(dctvgg['features.10.bias'])
+
+dct['down2.mpconv.1.conv.3.weight'].data.copy_(dctvgg['features.12.weight'])
+dct['down2.mpconv.1.conv.3.bias'].data.copy_(dctvgg['features.12.bias'])
+
+dct['down3.mpconv.1.conv.0.weight'].data.copy_(dctvgg['features.15.weight'])
+dct['down3.mpconv.1.conv.0.bias'].data.copy_(dctvgg['features.15.bias'])
+
+dct['down3.mpconv.1.conv.3.weight'].data.copy_(dctvgg['features.17.weight'])
+dct['down3.mpconv.1.conv.3.bias'].data.copy_(dctvgg['features.17.bias'])
+
+dct['down4.mpconv.1.conv.0.weight'].data.copy_(dctvgg['features.20.weight'])
+dct['down4.mpconv.1.conv.0.bias'].data.copy_(dctvgg['features.20.bias'])
+
+dct['down4.mpconv.1.conv.3.weight'].data.copy_(dctvgg['features.22.weight'])
+dct['down4.mpconv.1.conv.3.bias'].data.copy_(dctvgg['features.22.bias'])
+
+model.load_state_dict(dct)
+
+
 
 
 
@@ -28,7 +71,7 @@ gpu_id = 0
 device = torch.device("cuda:"+str(gpu_id) if torch.cuda.is_available() else "cpu")
 if torch.cuda.device_count() > 1:
     print('using gpus')
-    model = DataParallel(UNet(),device_ids=range(torch.cuda.device_count()))
+    model = DataParallel(model,device_ids=range(torch.cuda.device_count()))
 
 #print(torch.cuda.device_count())
 #model = UNet().to(device)
