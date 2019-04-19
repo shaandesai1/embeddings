@@ -22,7 +22,7 @@ from torch.nn import DataParallel
 
 import torchvision.utils as vutils
 from tensorboardX import SummaryWriter
-
+from sklearn.metrics import jaccard_similarity_score as jacc
 
 
 
@@ -87,7 +87,7 @@ model.to(device)
 
 train_df = CocoDetection('/data/shaan/train2017','/data/shaan/annotations/instances_train2017.json',transform = transforms.ToTensor(),target_transform=transforms.ToTensor())
 
-train_dataloader = DataLoader(train_df, batch_size = 14, shuffle = True, num_workers = 2)
+train_dataloader = DataLoader(train_df, batch_size =50, shuffle = True, num_workers = 2)
 
 #val_df = CocoDetection('/data/shaan/val2017','/data/shaan/annotations/instances_val2017.json',transform = transforms.toTensor(),target_transform=transforms.toTensor())
 
@@ -141,7 +141,10 @@ for epoch in range(15):
         ins_predict = model(images)
         loss = 0
 
-        
+        ss = F.softmax(ins_predict,dim=1)
+        yp = torch.argmax(ss,dim=1).numpy().reshape(-1)
+
+        yt = ins_labels.numpy().reshape(-1)
         
         # Discriminative Loss
         #disc_loss = criterion_disc(ins_predict,
@@ -153,7 +156,7 @@ for epoch in range(15):
         
         loss.backward()
         optimizer.step()
-
+        writer.add_scalar('jacc(iou)',jacc(yt,yp),n_iter)
         writer.add_scalar('scalar1',loss,n_iter)
     disc_loss = np.mean(disc_losses)
     #print(f'DiscriminativeLoss: {disc_loss:.4f}')
