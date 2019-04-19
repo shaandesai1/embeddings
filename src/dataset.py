@@ -186,7 +186,7 @@ class CocoDetection(Dataset):
                 resized = cv2.resize(arr_img,dsize=(shap[1],shap[0]),interpolation=cv2.INTER_NEAREST)
                 if np.max(resized) != 1:
                     resized[np.nonzero(resized)] = 1
-                print(np.max(resized))
+          #      print(np.max(resized))
                 bgnd.append(resized)
                 target.append(resized)
         bgnd = sum(bgnd)
@@ -216,18 +216,18 @@ class CocoDetection(Dataset):
         
         
         new_target = np.zeros((256,256))
-        
+        new_target = np.max(target,axis=0)       
         #for i in range(len(target)-1):
-        for j in range(256):
-            for k in range(256):
-                vec = target[:,j,k]
+        #for j in range(256):
+        #    for k in range(256):
+        #        vec = target[:,j,k]
             
             #new_target = new_target + target[i,:,:]*anns[i]['category_id']
-                new_target[j,k] = np.max(vec)#new_target[:,:] + target[i,:,:]*new_anns[i]
+        #        new_target[j,k] = np.max(vec)#new_target[:,:] + target[i,:,:]*new_anns[i]
         #new_target[:,:] = new_target[:,:] + target[i+1,:,:]*0
 #new_target[np.nonzero(new_target)] = 1
 #new_target[np.where(new_target>40)] = 0
-#       target = torch.from_numpy(new_target)
+        target = torch.from_numpy(new_target)
         
         
         if self.transform is not None:

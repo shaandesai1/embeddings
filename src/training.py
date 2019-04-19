@@ -154,7 +154,7 @@ for epoch in range(15):
         loss.backward()
         optimizer.step()
 
-        writer.add_scalar('scalar1',disc_loss,n_iter)
+        writer.add_scalar('scalar1',loss,n_iter)
     disc_loss = np.mean(disc_losses)
     #print(f'DiscriminativeLoss: {disc_loss:.4f}')
     #print(f'CrossEntropyLoss: {ce_loss:.4f}')
