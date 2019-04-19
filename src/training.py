@@ -96,11 +96,11 @@ train_dataloader = DataLoader(train_df, batch_size = 14, shuffle = True, num_wor
 
 
 # Loss Function
-criterion_disc = DiscriminativeLoss(delta_var=0.5,
-                                    delta_dist=1.5,
-                                    norm=2,
-                                    usegpu=True)
-#criterion_ce = nn.CrossEntropyLoss()
+#criterion_disc = DiscriminativeLoss(delta_var=0.5,
+#                                    delta_dist=1.5,
+#                                    norm=2,
+#                                    usegpu=True)
+criterion_ce = nn.CrossEntropyLoss().cuda()
 
 
 # In[7]:
@@ -135,7 +135,7 @@ for epoch in range(15):
  #       images = images.to(device)
  #       ins_labels = ins_labels.to(device)
         images = images.float().to(device)
-        ins_labels = ins_labels.float().to(device)
+        ins_labels = ins_labels.long().to(device)
         model.zero_grad()
 
         ins_predict = model(images)
@@ -144,13 +144,13 @@ for epoch in range(15):
         
         
         # Discriminative Loss
-        disc_loss = criterion_disc(ins_predict,
-                                   ins_labels,
-                                   [41] * len(images))
-        loss += disc_loss
-        disc_losses.append(disc_loss.cpu().data.tolist())
-
-    
+        #disc_loss = criterion_disc(ins_predict,
+        #                           ins_labels,
+        #                           [41] * len(images))
+        #loss += disc_loss
+        loss = criterion_ce(ins_predict,ins_labels)
+        disc_losses.append(loss.cpu().data.tolist())
+        
         loss.backward()
         optimizer.step()
 
@@ -158,7 +158,7 @@ for epoch in range(15):
     disc_loss = np.mean(disc_losses)
     #print(f'DiscriminativeLoss: {disc_loss:.4f}')
     #print(f'CrossEntropyLoss: {ce_loss:.4f}')
-    scheduler.step(disc_loss)
+    scheduler.step(loss)
     if disc_loss < best_loss:
         best_loss = disc_loss
         print('Best Model!')
