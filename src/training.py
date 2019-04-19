@@ -12,15 +12,17 @@ from torch.utils.data import DataLoader
 from torch.autograd import Variable
 import sys
 sys.path.append('../src/')
-
 from model import UNet
 from dataset import SSSDataset
 from dataset import CocoDetection
 from loss import DiscriminativeLoss
 import torchvision.models as models
-
-
 from torch.nn import DataParallel
+
+
+import torchvision.utils as vutils
+from tensorboardX import SummaryWriter
+
 
 
 
@@ -63,7 +65,7 @@ dct['down4.mpconv.1.conv.3.bias'].data.copy_(dctvgg['features.22.bias'])
 model.load_state_dict(dct)
 
 
-
+writer = SummaryWriter()
 
 
 # Model
@@ -85,7 +87,7 @@ model.to(device)
 
 train_df = CocoDetection('/data/shaan/train2017','/data/shaan/annotations/instances_train2017.json',transform = transforms.ToTensor(),target_transform=transforms.ToTensor())
 
-train_dataloader = DataLoader(train_df, batch_size = 4, shuffle = True, num_workers = 2)
+train_dataloader = DataLoader(train_df, batch_size = 14, shuffle = True, num_workers = 2)
 
 #val_df = CocoDetection('/data/shaan/val2017','/data/shaan/annotations/instances_val2017.json',transform = transforms.toTensor(),target_transform=transforms.toTensor())
 
@@ -119,13 +121,15 @@ scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer,
 
 # Train
 model_dir = 'model'
-
+n_iter = 0
 best_loss = np.inf
-for epoch in range(4):
+for epoch in range(15):
     #print(f'epoch : {epoch}')
     disc_losses = []
     print('epoch')#ce_losses = []
+    
     for batched in train_dataloader:
+        n_iter += 1
         print('batch')
         images, ins_labels = batched
  #       images = images.to(device)
@@ -150,6 +154,7 @@ for epoch in range(4):
         loss.backward()
         optimizer.step()
 
+        writer.add_scalar('scalar1',disc_loss,n_iter)
     disc_loss = np.mean(disc_losses)
     #print(f'DiscriminativeLoss: {disc_loss:.4f}')
     #print(f'CrossEntropyLoss: {ce_loss:.4f}')

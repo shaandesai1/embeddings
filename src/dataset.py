@@ -123,7 +123,7 @@ class CocoDetection(Dataset):
             if anns == []:
                 rejects.append(val)
                 ctr+=1
-        print(ctr)
+  #      print(ctr)
         self.ids = list(set(init_ids) - set(rejects))
 
 
@@ -131,11 +131,12 @@ class CocoDetection(Dataset):
         dct = {}
 
         for i in range(global_classes):
-            dct[indices[i]] = 1 + i 
+            val_tmp = self.coco.getCatIds(catNms=nms[indices[i]])
+            dct[val_tmp[0]] = 1 + i 
 
         self.reindex = dct
 
-        print(len(self.ids))
+ #       print(len(self.ids))
     def __getitem__(self, index):
         """
             Args:
