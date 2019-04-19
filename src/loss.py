@@ -7,6 +7,7 @@ https://github.com/Wizaron/instance-segmentation-pytorch
 from torch.nn.modules.loss import _Loss
 from torch.autograd import Variable
 import torch
+import numpy as np
 
 
 class DiscriminativeLoss(_Loss):
@@ -36,7 +37,9 @@ class DiscriminativeLoss(_Loss):
         target = target.contiguous().view(bs, max_n_clusters, height * width)
 
         c_means = self._cluster_means(input, target, n_clusters)
+        print(c_means)
         l_var = self._variance_term(input, target, c_means, n_clusters)
+        print(l_var)
         l_dist = self._distance_term(c_means, n_clusters)
         l_reg = self._regularization_term(c_means, n_clusters)
 
@@ -54,16 +57,19 @@ class DiscriminativeLoss(_Loss):
         target = target.unsqueeze(1)
         # bs, n_features, max_n_clusters, n_loc
         input = input * target
-
+        #print(input)
         means = []
         for i in range(bs):
             # n_features, n_clusters, n_loc
             input_sample = input[i, :, :n_clusters[i]]
             # 1, n_clusters, n_loc,
             target_sample = target[i, :, :n_clusters[i]]
+            
+            indices = torch.nonzero(target_sample)
+            
             # n_features, n_cluster
             mean_sample = input_sample.sum(2) / target_sample.sum(2)
-
+            mean_sample[torch.isnan(mean_sample)] = 0
             # padding
             n_pad_clusters = max_n_clusters - n_clusters[i]
             assert n_pad_clusters >= 0
@@ -74,7 +80,7 @@ class DiscriminativeLoss(_Loss):
                 #     pad_sample = pad_sample.cuda()
                 mean_sample = torch.cat((mean_sample, pad_sample), dim=1)
             means.append(mean_sample)
-
+        #print(mean_sample)
         # bs, n_features, max_n_clusters
         means = torch.stack(means)
 
@@ -101,7 +107,9 @@ class DiscriminativeLoss(_Loss):
 
             # n_clusters
             c_var = var_sample.sum(1) / target_sample.sum(1)
-            var_term += c_var.sum() / n_clusters[i]
+            c_var[torch.isnan(c_var)] = 0
+        #var_term += c_var.sum() / n_clusters[i]
+            var_term += c_var.sum()/torch.nonzero(c_var).size(0)
         var_term /= bs
 
         return var_term
@@ -123,7 +131,7 @@ class DiscriminativeLoss(_Loss):
             diff = means_a - means_b
 
             margin = 2 * self.delta_dist * (1.0 - torch.eye(n_clusters[i]))
-            margin = margin.cuda()
+            #margin = margin.cuda()
             #if self.usegpu:
             #    margin = margin.cuda()
             c_dist = torch.sum(torch.clamp(margin - torch.norm(diff, self.norm, 0), min=0) ** 2)
