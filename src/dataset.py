@@ -85,19 +85,6 @@ class CocoDetection(Dataset):
         global_classes = 40
         self.global_classes = global_classes
         rejects = []
-        #arr = list(self.coco.imgs.keys())
-        
-        #find the ids which have an instances!
- #       for i,val in enumerate(arr):
- #           annIds = self.coco.getAnnIds(imgIds=val)
- #           anns = self.coco.loadAnns(annIds)
- #           if anns == []:
- #               rejects.append(val)
- #               ctr+=1
- #       print(ctr)
- #       self.ids = list(set(arr) - set(rejects))
-
-
 
         #find the top 'globalclasses' categories and their ids
         cats = self.coco.loadCats(self.coco.getCatIds())
@@ -123,7 +110,6 @@ class CocoDetection(Dataset):
             if anns == []:
                 rejects.append(val)
                 ctr+=1
-  #      print(ctr)
         self.ids = list(set(init_ids) - set(rejects))
 
 
@@ -131,12 +117,12 @@ class CocoDetection(Dataset):
         dct = {}
 
         for i in range(global_classes):
+            print(nms[indices[i]])
             val_tmp = self.coco.getCatIds(catNms=nms[indices[i]])
             dct[val_tmp[0]] = 1 + i 
-
+        
         self.reindex = dct
 
- #       print(len(self.ids))
     def __getitem__(self, index):
         """
             Args:
@@ -149,19 +135,11 @@ class CocoDetection(Dataset):
         img_id = self.ids[index]
         ann_ids = coco.getAnnIds(imgIds=img_id)
         anns = coco.loadAnns(ann_ids)
-        
-        #print(anns[0]['category_id'])
-        #cats = coco.loadCats(coco.getCatIds())
-        #nms=[cat['id'] for cat in cats]
-        #print(list(self.coco.cats.keys()))
-        
-        
         path = coco.loadImgs(img_id)[0]['file_name']
-        
         img = Image.open(os.path.join(self.root, path)).convert('RGB')
         sz = img.size
-        
         new_size = 256
+        
         
         # resizing the image on long dim, maintain aspect ratio
         if sz[0] > sz[1]:
@@ -188,13 +166,14 @@ class CocoDetection(Dataset):
                     resized[np.nonzero(resized)] = 1
                         #print(np.max(resized))
                 bgnd.append(resized)
-                target.append(resized)
-        bgnd = sum(bgnd)
-        bgnd[np.nonzero(bgnd)] = 1
-        bgnd = 1 - bgnd
-        target.append(bgnd)
+                target.append(resized*new_anns[-1])
+        #bgnd = sum(bgnd)
+        #bgnd[np.nonzero(bgnd)] = 1
+        #bgnd = 1 - bgnd
+        #target.append(bgnd)
         
-        
+        target = np.array(target)
+        target = np.max(target,axis=0)
         #padding
         pad_amt = new_size - min_size
         pad_left = pad_amt//2
@@ -206,28 +185,14 @@ class CocoDetection(Dataset):
         
         img = ImageOps.expand(img, padding)
         
-        for i in range(len(target)):
-            if sz[0] > sz[1]:
-                target[i] = cv2.copyMakeBorder(target[i],0,0,pad_left,pad_right,cv2.BORDER_CONSTANT,value=0)
-            else:
-                target[i] = cv2.copyMakeBorder(target[i],pad_left,pad_right,0,0,cv2.BORDER_CONSTANT,value=0)
-        
-        target = np.array(target)
-        
-        
-        new_target = np.zeros((256,256))
-        
-        #for i in range(len(target)-1):
-        for j in range(256):
-            for k in range(256):
-                vec = target[:,j,k]
-            
-            #new_target = new_target + target[i,:,:]*anns[i]['category_id']
-                new_target[j,k] = np.max(vec)#new_target[:,:] + target[i,:,:]*new_anns[i]
-        #new_target[:,:] = new_target[:,:] + target[i+1,:,:]*0
-#new_target[np.nonzero(new_target)] = 1
-#new_target[np.where(new_target>40)] = 0
-        target = torch.from_numpy(new_target)
+        #for i in range(len(target)):
+        if sz[0] > sz[1]:
+            target = cv2.copyMakeBorder(target, 0,0,pad_left,pad_right,cv2.BORDER_CONSTANT,value=99)
+        else:
+            target = cv2.copyMakeBorder(target,pad_left,pad_right,0,0,cv2.BORDER_CONSTANT,value=99)
+    
+   
+        target = torch.from_numpy(target)
         
         
         if self.transform is not None:

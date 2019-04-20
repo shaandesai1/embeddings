@@ -22,7 +22,7 @@ from torch.nn import DataParallel
 
 import torchvision.utils as vutils
 from tensorboardX import SummaryWriter
-
+from sklearn.metrics import jaccard_similarity_score as jacc
 
 
 
@@ -75,24 +75,11 @@ if torch.cuda.device_count() > 1:
     print('using gpus')
     model = DataParallel(model,device_ids=range(torch.cuda.device_count()))
 
-#print(torch.cuda.device_count())
-#model = UNet().to(device)
 model.to(device)
-# Dataset for train with sticks
-#train_dataset = SSSDataset(train=True, n_sticks=n_sticks)
-#train_dataloader = DataLoader(train_dataset, batch_size=4,
-#                              shuffle=False, num_workers=0, pin_memory=True)
 
 #coco dataset training
-
 train_df = CocoDetection('/data/shaan/train2017','/data/shaan/annotations/instances_train2017.json',transform = transforms.ToTensor(),target_transform=transforms.ToTensor())
-
-train_dataloader = DataLoader(train_df, batch_size = 14, shuffle = True, num_workers = 2)
-
-#val_df = CocoDetection('/data/shaan/val2017','/data/shaan/annotations/instances_val2017.json',transform = transforms.toTensor(),target_transform=transforms.toTensor())
-
-#val_df = CocoDetection('/data/shaan/test2017','/data/shaan/annotations/instances_test2017.json',transform = transforms.toTensor(),target_transform=transforms.toTensor())
-
+train_dataloader = DataLoader(train_df, batch_size =50, shuffle = True, num_workers = 2)
 
 
 # Loss Function
@@ -100,11 +87,7 @@ train_dataloader = DataLoader(train_df, batch_size = 14, shuffle = True, num_wor
 #                                    delta_dist=1.5,
 #                                    norm=2,
 #                                    usegpu=True)
-criterion_ce = nn.CrossEntropyLoss().cuda()
-
-
-# In[7]:
-
+criterion_ce = nn.CrossEntropyLoss(ignore_index=99).cuda()
 
 # Optimizer
 parameters = model.parameters()
@@ -116,9 +99,6 @@ scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer,
                                                  verbose=True)
 
 
-# In[24]:
-
-
 # Train
 model_dir = 'model'
 n_iter = 0
@@ -126,22 +106,21 @@ best_loss = np.inf
 for epoch in range(15):
     #print(f'epoch : {epoch}')
     disc_losses = []
-    print('epoch')#ce_losses = []
+    print('epoch')
     
     for batched in train_dataloader:
         n_iter += 1
         print('batch')
         images, ins_labels = batched
- #       images = images.to(device)
- #       ins_labels = ins_labels.to(device)
         images = images.float().to(device)
         ins_labels = ins_labels.long().to(device)
         model.zero_grad()
 
         ins_predict = model(images)
         loss = 0
-
-        
+        ss = F.softmax(ins_predict,dim=1)
+        yp = torch.argmax(ss,dim=1).numpy().reshape(-1)
+        yt = ins_labels.numpy().reshape(-1)
         
         # Discriminative Loss
         #disc_loss = criterion_disc(ins_predict,
@@ -153,11 +132,9 @@ for epoch in range(15):
         
         loss.backward()
         optimizer.step()
-
-        writer.add_scalar('scalar1',disc_loss,n_iter)
+        writer.add_scalar('jacc(iou)',jacc(yt,yp),n_iter)
+        writer.add_scalar('scalar1',loss,n_iter)
     disc_loss = np.mean(disc_losses)
-    #print(f'DiscriminativeLoss: {disc_loss:.4f}')
-    #print(f'CrossEntropyLoss: {ce_loss:.4f}')
     scheduler.step(loss)
     if disc_loss < best_loss:
         best_loss = disc_loss
