@@ -117,7 +117,7 @@ class CocoDetection(Dataset):
         dct = {}
 
         for i in range(global_classes):
-            print(nms[indices[i]])
+            #print(nms[indices[i]])
             val_tmp = self.coco.getCatIds(catNms=nms[indices[i]])
             dct[val_tmp[0]] = 1 + i 
         

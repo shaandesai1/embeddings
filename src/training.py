@@ -79,7 +79,7 @@ model.to(device)
 
 #coco dataset training
 train_df = CocoDetection('/data/shaan/train2017','/data/shaan/annotations/instances_train2017.json',transform = transforms.ToTensor(),target_transform=transforms.ToTensor())
-train_dataloader = DataLoader(train_df, batch_size =50, shuffle = True, num_workers = 2)
+train_dataloader = DataLoader(train_df, batch_size =32, shuffle = True, num_workers = 2)
 
 
 # Loss Function
@@ -119,8 +119,8 @@ for epoch in range(15):
         ins_predict = model(images)
         loss = 0
         ss = F.softmax(ins_predict,dim=1)
-        yp = torch.argmax(ss,dim=1).numpy().reshape(-1)
-        yt = ins_labels.numpy().reshape(-1)
+        yp = torch.argmax(ss,dim=1).cpu().numpy().reshape(-1)
+        yt = ins_labels.cpu().numpy().reshape(-1)
         
         # Discriminative Loss
         #disc_loss = criterion_disc(ins_predict,
@@ -135,7 +135,7 @@ for epoch in range(15):
         writer.add_scalar('jacc(iou)',jacc(yt,yp),n_iter)
         writer.add_scalar('scalar1',loss,n_iter)
     disc_loss = np.mean(disc_losses)
-    scheduler.step(loss)
+ #   scheduler.step(loss)
     if disc_loss < best_loss:
         best_loss = disc_loss
         print('Best Model!')
