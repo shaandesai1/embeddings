@@ -76,32 +76,26 @@ class CocoDetection(Dataset):
         target and transforms it.
         """
     
-    def __init__(self, root, annFile, transform=None, target_transform=None):
+    def __init__(self, root, annFile, catnames=None,transform=None, target_transform=None):
         self.transform = transform
         self.target_transform = target_transform
         self.coco = COCO(annFile)
         self.root = root
         ctr = 0
-        global_classes = 40
+        global_classes = len(catnames)
         self.global_classes = global_classes
         rejects = []
 
-        #find the top 'globalclasses' categories and their ids
-        cats = self.coco.loadCats(self.coco.getCatIds())
-        nms=[cat['name'] for cat in cats]
         idset = []
-        catcount = []
-        for i,name in enumerate(nms):
+        for i,name in enumerate(catnames):
             catIds = self.coco.getCatIds(catNms=name)
             imgIds = self.coco.getImgIds(catIds=catIds)
             idset.append(imgIds)
-            catcount.append(len(imgIds))
 
-        indices = np.argsort(catcount)[-global_classes:]
-        init_ids = idset[indices[0]]
+        init_ids = idset[0]
 
         for i in range(1,global_classes):
-            init_ids = list(set().union(init_ids,idset[indices[i]]))
+            init_ids = list(set().union(init_ids,idset[i]))
 
         #self.ids = list(set(self.ids).intersection(init_ids))
         for i,val in enumerate(init_ids):
@@ -112,13 +106,12 @@ class CocoDetection(Dataset):
                 ctr+=1
         self.ids = list(set(init_ids) - set(rejects))
 
-
-        indices = np.flip(np.argsort(catcount)[-global_classes:])
         dct = {}
 
         for i in range(global_classes):
             #print(nms[indices[i]])
-            val_tmp = self.coco.getCatIds(catNms=nms[indices[i]])
+            val_tmp = self.coco.getCatIds(catNms=catnames[i])
+            #print(val_tmp)
             dct[val_tmp[0]] = 1 + i 
         
         self.reindex = dct
@@ -161,7 +154,7 @@ class CocoDetection(Dataset):
             if anns[i]['category_id'] in self.reindex:
                 new_anns.append(self.reindex[anns[i]['category_id']])
                 arr_img = coco.annToMask(anns[i])
-                resized = cv2.resize(arr_img,dsize=(shap[1],shap[0]),interpolation=cv2.INTER_NEAREST)
+                resized = cv2.resize(arr_img,dsize=(shap[0],shap[1]),interpolation=cv2.INTER_NEAREST)
                 if np.max(resized) != 1:
                     resized[np.nonzero(resized)] = 1
                         #print(np.max(resized))
@@ -187,9 +180,9 @@ class CocoDetection(Dataset):
         
         #for i in range(len(target)):
         if sz[0] > sz[1]:
-            target = cv2.copyMakeBorder(target, 0,0,pad_left,pad_right,cv2.BORDER_CONSTANT,value=99)
-        else:
             target = cv2.copyMakeBorder(target,pad_left,pad_right,0,0,cv2.BORDER_CONSTANT,value=99)
+        else:
+            target = cv2.copyMakeBorder(target,0,0,pad_left,pad_right,cv2.BORDER_CONSTANT,value=99)
     
    
         target = torch.from_numpy(target)

@@ -24,6 +24,40 @@ import torchvision.utils as vutils
 from tensorboardX import SummaryWriter
 from sklearn.metrics import jaccard_similarity_score as jacc
 
+from pycocotools.coco import COCO
+
+global_classes = 40
+#global_classes = global_classes
+rejects = []
+annFile='/data/shaan/annotations/instances_train2017.json'
+coco=COCO(annFile)
+#find the top 'globalclasses' categories and their ids
+cats = coco.loadCats(coco.getCatIds())
+nms=[cat['name'] for cat in cats]
+idset = []
+catcount = []
+
+for i,name in enumerate(nms):
+    catIds = coco.getCatIds(catNms=name)
+    imgIds = coco.getImgIds(catIds=catIds)
+    catcount.append(len(imgIds))
+
+indices = np.flip(np.argsort(catcount)[-global_classes:])
+
+
+
+topk_catnames = []
+for i in range(global_classes):
+    topk_catnames.append(nms[indices[i]])
+    
+
+
+
+
+
+
+
+
 
 
 vgg13 = models.vgg13(pretrained=True)
@@ -78,9 +112,9 @@ if torch.cuda.device_count() > 1:
 model.to(device)
 
 #coco dataset training
-train_df = CocoDetection('/data/shaan/train2017','/data/shaan/annotations/instances_train2017.json',transform = transforms.ToTensor(),target_transform=transforms.ToTensor())
+train_df = CocoDetection('/data/shaan/train2017','/data/shaan/annotations/instances_train2017.json',catnames=topk_catnames,transform = transforms.ToTensor(),target_transform=transforms.ToTensor())
 train_dataloader = DataLoader(train_df, batch_size =32, shuffle = True, num_workers = 2)
-val_df = CocoDetection('/data/shaan/val2017','/data/shaan/annotations/instances_val2017.json',transform = transforms.ToTensor(),target_transform=transforms.ToTensor())
+val_df = CocoDetection('/data/shaan/val2017','/data/shaan/annotations/instances_val2017.json',catnames=topk_catnames,transform = transforms.ToTensor(),target_transform=transforms.ToTensor())
 val_dataloader = DataLoader(val_df, batch_size =32, num_workers = 2)
 
 
