@@ -32,8 +32,8 @@ class DiscriminativeLoss(_Loss):
         return self._discriminative_loss(input, target, n_clusters)
     
     def _discriminative_loss(self, image, instances_bs, annid):
-        for i in range(len(image)):
-            img = image[i]
+        for i in range(image.size(0)):
+            img = image[i,:,:,:]
             instances = instances_bs[i]
             imshape = img.shape
             instshape = instances.shape
@@ -72,12 +72,11 @@ class DiscriminativeLoss(_Loss):
         return loss
     
     def cluster_means(img,instances):
-    #feats,clusters,h,w
-    result = img.float()*instances.float()
-    #feats,clusters
-    means = result.sum(dim=[2,3])/instances.sum(dim=[2,3]).float()
-    
-            return(means)
+        #feats,clusters,h,w
+        result = img.float()*instances.float()
+        #feats,clusters
+        means = result.sum(dim=[2,3])/instances.sum(dim=[2,3]).float()
+        return(means)
 
     def cluster_vars(self,img,instances,means):
         #feats,clusters,h*w

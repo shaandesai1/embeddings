@@ -15,7 +15,7 @@ sys.path.append('../src/')
 from model import UNet
 from dataset import SSSDataset
 from dataset import CocoDetection
-from loss import DiscriminativeLoss
+from new_loss import DiscriminativeLoss
 import torchvision.models as models
 from torch.nn import DataParallel
 
@@ -57,46 +57,46 @@ for i in range(global_classes):
 
 
 
+#if pretrain == 1:
 
 
-
-vgg13 = models.vgg13(pretrained=True)
-model = UNet()
-
-dctvgg = vgg13.state_dict()
-dct = model.state_dict()
-
-dct['inc.conv.conv.0.weight'].data.copy_(dctvgg['features.0.weight'])
-dct['inc.conv.conv.0.bias'].data.copy_(dctvgg['features.0.bias'])
-
-dct['inc.conv.conv.3.weight'].data.copy_(dctvgg['features.2.weight'])
-dct['inc.conv.conv.3.bias'].data.copy_(dctvgg['features.2.bias'])
-
-dct['down1.mpconv.1.conv.0.weight'].data.copy_(dctvgg['features.5.weight'])
-dct['down1.mpconv.1.conv.0.bias'].data.copy_(dctvgg['features.5.bias'])
-
-dct['down1.mpconv.1.conv.3.weight'].data.copy_(dctvgg['features.7.weight'])
-dct['down1.mpconv.1.conv.3.bias'].data.copy_(dctvgg['features.7.bias'])
-
-dct['down2.mpconv.1.conv.0.weight'].data.copy_(dctvgg['features.10.weight'])
-dct['down2.mpconv.1.conv.0.bias'].data.copy_(dctvgg['features.10.bias'])
-
-dct['down2.mpconv.1.conv.3.weight'].data.copy_(dctvgg['features.12.weight'])
-dct['down2.mpconv.1.conv.3.bias'].data.copy_(dctvgg['features.12.bias'])
-
-dct['down3.mpconv.1.conv.0.weight'].data.copy_(dctvgg['features.15.weight'])
-dct['down3.mpconv.1.conv.0.bias'].data.copy_(dctvgg['features.15.bias'])
-
-dct['down3.mpconv.1.conv.3.weight'].data.copy_(dctvgg['features.17.weight'])
-dct['down3.mpconv.1.conv.3.bias'].data.copy_(dctvgg['features.17.bias'])
-
-dct['down4.mpconv.1.conv.0.weight'].data.copy_(dctvgg['features.20.weight'])
-dct['down4.mpconv.1.conv.0.bias'].data.copy_(dctvgg['features.20.bias'])
-
-dct['down4.mpconv.1.conv.3.weight'].data.copy_(dctvgg['features.22.weight'])
-dct['down4.mpconv.1.conv.3.bias'].data.copy_(dctvgg['features.22.bias'])
-
-model.load_state_dict(dct)
+#vgg13 = models.vgg13(pretrained=True)
+#model = UNet()
+#
+#dctvgg = vgg13.state_dict()
+#dct = model.state_dict()
+#
+#dct['inc.conv.conv.0.weight'].data.copy_(dctvgg['features.0.weight'])
+#dct['inc.conv.conv.0.bias'].data.copy_(dctvgg['features.0.bias'])
+#
+#dct['inc.conv.conv.3.weight'].data.copy_(dctvgg['features.2.weight'])
+#dct['inc.conv.conv.3.bias'].data.copy_(dctvgg['features.2.bias'])
+#
+#dct['down1.mpconv.1.conv.0.weight'].data.copy_(dctvgg['features.5.weight'])
+#dct['down1.mpconv.1.conv.0.bias'].data.copy_(dctvgg['features.5.bias'])
+#
+#dct['down1.mpconv.1.conv.3.weight'].data.copy_(dctvgg['features.7.weight'])
+#dct['down1.mpconv.1.conv.3.bias'].data.copy_(dctvgg['features.7.bias'])
+#
+#dct['down2.mpconv.1.conv.0.weight'].data.copy_(dctvgg['features.10.weight'])
+#dct['down2.mpconv.1.conv.0.bias'].data.copy_(dctvgg['features.10.bias'])
+#
+#dct['down2.mpconv.1.conv.3.weight'].data.copy_(dctvgg['features.12.weight'])
+#dct['down2.mpconv.1.conv.3.bias'].data.copy_(dctvgg['features.12.bias'])
+#
+#dct['down3.mpconv.1.conv.0.weight'].data.copy_(dctvgg['features.15.weight'])
+#dct['down3.mpconv.1.conv.0.bias'].data.copy_(dctvgg['features.15.bias'])
+#
+#dct['down3.mpconv.1.conv.3.weight'].data.copy_(dctvgg['features.17.weight'])
+#dct['down3.mpconv.1.conv.3.bias'].data.copy_(dctvgg['features.17.bias'])
+#
+#dct['down4.mpconv.1.conv.0.weight'].data.copy_(dctvgg['features.20.weight'])
+#dct['down4.mpconv.1.conv.0.bias'].data.copy_(dctvgg['features.20.bias'])
+#
+#dct['down4.mpconv.1.conv.3.weight'].data.copy_(dctvgg['features.22.weight'])
+#dct['down4.mpconv.1.conv.3.bias'].data.copy_(dctvgg['features.22.bias'])
+#
+#model.load_state_dict(dct)
 
 
 writer = SummaryWriter()
@@ -108,14 +108,28 @@ device = torch.device("cuda:"+str(gpu_id) if torch.cuda.is_available() else "cpu
 if torch.cuda.device_count() > 1:
     print('using gpus')
     model = DataParallel(model,device_ids=range(torch.cuda.device_count()))
-
+model.load_state_dict('model.pth')
 model.to(device)
+
+
+def my_collate(batch):
+    img = [item[0] for item in batch]  # just form a list of tensor
+    
+    mask = [item[1] for item in batch]
+    
+    instance = [item[2] for item in batch]
+    
+    annid = [item[3] for item in batch]
+    #instance = torch.LongTensor(instance)
+    #annid = torch.LongTensor(annid)
+    return [img,mask,instance,annid]
 
 #coco dataset training
 train_df = CocoDetection('/data/shaan/train2017','/data/shaan/annotations/instances_train2017.json',catnames=topk_catnames,transform = transforms.ToTensor(),target_transform=transforms.ToTensor())
-train_dataloader = DataLoader(train_df, batch_size =32, shuffle = True, num_workers = 2)
+train_dataloader = DataLoader(train_df, batch_size =32, shuffle = True, num_workers = 2,collate_fn = my_collate)
 val_df = CocoDetection('/data/shaan/val2017','/data/shaan/annotations/instances_val2017.json',catnames=topk_catnames,transform = transforms.ToTensor(),target_transform=transforms.ToTensor())
-val_dataloader = DataLoader(val_df, batch_size =32, num_workers = 2)
+val_dataloader = DataLoader(val_df, batch_size =32, num_workers = 2,collate_fn=my_collate)
+
 
 
 data_dict = {'train': train_dataloader, 'validation': val_dataloader}
@@ -127,7 +141,7 @@ data_dict = {'train': train_dataloader, 'validation': val_dataloader}
 
 #ignore padding
 criterion_ce = nn.CrossEntropyLoss(ignore_index=99).cuda()
-
+discriminative_loss = DiscriminativeLoss().cuda()
 # Optimizer
 parameters = model.parameters()
 optimizer = optim.SGD(parameters, lr=0.01, momentum=0.9, weight_decay=0.001)
@@ -163,20 +177,21 @@ def train_model(model,optimizer,scheduler,num_epochs=10):
            
             for batched in data_dict[phase]:
                 print('batch')
-                images, ins_labels = batched
+                images, sem_labels,instances,annid = batched
                 images = images.float().to(device)
-                ins_labels = ins_labels.long().to(device)
+                sem_labels = sem_labels.long().to(device)
                 optimizer.zero_grad()
                 with torch.set_grad_enabled(phase =='train'):
                 
-                    ins_predict = model(images)
-                    loss = criterion_ce(ins_predict,ins_labels)
+                    inst_predict,sem_predict = model(images)
+                    ce_loss = criterion_ce(sem_predict,sem_labels)
+                    disc_loss = discriminative_loss(inst_predict,instances,annid)
                     
-                    
-                    ss = F.softmax(ins_predict,dim=1)
+                    ss = F.softmax(sem_predict,dim=1)
                     yp = torch.argmax(ss,dim=1).cpu().numpy().reshape(-1)
-                    yt = ins_labels.cpu().numpy().reshape(-1)
-                
+                    yt = sem_labels.cpu().numpy().reshape(-1)
+                    
+                    loss = ce_loss + disc_loss
                     jacc_bvalue = jacc(yt,yp)
                 
                     if phase == 'train':

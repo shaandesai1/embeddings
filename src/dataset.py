@@ -149,7 +149,13 @@ class CocoDetection(Dataset):
         #resizing the target masks + adding background mask
         target = []
         bgnd = []
-        new_anns = []       
+        new_anns = []
+        
+        
+        instances = []
+        
+        
+        
         for i in range(len(anns)):
             if anns[i]['category_id'] in self.reindex:
                 new_anns.append(self.reindex[anns[i]['category_id']])
@@ -159,11 +165,19 @@ class CocoDetection(Dataset):
                     resized[np.nonzero(resized)] = 1
                         #print(np.max(resized))
                 bgnd.append(resized)
+                instances.append(resized)
                 target.append(resized*new_anns[-1])
         #bgnd = sum(bgnd)
         #bgnd[np.nonzero(bgnd)] = 1
         #bgnd = 1 - bgnd
         #target.append(bgnd)
+        
+        sort_order = np.argsort(new_anns)
+        sorted_anns = np.sort(new_anns)
+        instances = np.array(instances)
+        print(instances.shape)
+        instances = instances[sort_order,:,:]
+        
         
         target = np.array(target)
         target = np.max(target,axis=0)
@@ -177,23 +191,30 @@ class CocoDetection(Dataset):
             padding = (pad_left,0,pad_right,0)
         
         img = ImageOps.expand(img, padding)
-        
+        pad_instances = np.zeros((len(sorted_anns),256,256))
+        for i in range(len(sorted_anns)):
+            if sz[0] > sz[1]:
+                pad_instances[i,:,:] = cv2.copyMakeBorder(instances[i,:,:],pad_left,pad_right,0,0,cv2.BORDER_CONSTANT,value=0)
+            else:
+                pad_instances[i,:,:] = cv2.copyMakeBorder(instances[i,:,:],0,0,pad_left,pad_right,cv2.BORDER_CONSTANT,value=0)
+
+
+
         #for i in range(len(target)):
         if sz[0] > sz[1]:
             target = cv2.copyMakeBorder(target,pad_left,pad_right,0,0,cv2.BORDER_CONSTANT,value=99)
         else:
             target = cv2.copyMakeBorder(target,0,0,pad_left,pad_right,cv2.BORDER_CONSTANT,value=99)
-    
-   
+
         target = torch.from_numpy(target)
-        
+        instances = torch.from_numpy(pad_instances)
         
         if self.transform is not None:
             img = self.transform(img)
         
         if self.target_transform is not None:
             pass
-        return img, target
+        return img, target, instances, sorted_anns
     
     
     def __len__(self):
