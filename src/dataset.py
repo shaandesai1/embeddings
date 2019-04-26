@@ -175,7 +175,7 @@ class CocoDetection(Dataset):
         sort_order = np.argsort(new_anns)
         sorted_anns = np.sort(new_anns)
         instances = np.array(instances)
-        print(instances.shape)
+        #print(instances.shape)
         instances = instances[sort_order,:,:]
         
         

@@ -60,43 +60,43 @@ for i in range(global_classes):
 #if pretrain == 1:
 
 
-#vgg13 = models.vgg13(pretrained=True)
-#model = UNet()
+vgg13 = models.vgg13(pretrained=True)
+model = UNet()
+
+dctvgg = vgg13.state_dict()
+dct = model.state_dict()
+
+dct['inc.conv.conv.0.weight'].data.copy_(dctvgg['features.0.weight'])#
+dct['inc.conv.conv.0.bias'].data.copy_(dctvgg['features.0.bias'])
 #
-#dctvgg = vgg13.state_dict()
-#dct = model.state_dict()
+dct['inc.conv.conv.3.weight'].data.copy_(dctvgg['features.2.weight'])
+dct['inc.conv.conv.3.bias'].data.copy_(dctvgg['features.2.bias'])
 #
-#dct['inc.conv.conv.0.weight'].data.copy_(dctvgg['features.0.weight'])
-#dct['inc.conv.conv.0.bias'].data.copy_(dctvgg['features.0.bias'])
+dct['down1.mpconv.1.conv.0.weight'].data.copy_(dctvgg['features.5.weight'])
+dct['down1.mpconv.1.conv.0.bias'].data.copy_(dctvgg['features.5.bias'])
 #
-#dct['inc.conv.conv.3.weight'].data.copy_(dctvgg['features.2.weight'])
-#dct['inc.conv.conv.3.bias'].data.copy_(dctvgg['features.2.bias'])
+dct['down1.mpconv.1.conv.3.weight'].data.copy_(dctvgg['features.7.weight'])
+dct['down1.mpconv.1.conv.3.bias'].data.copy_(dctvgg['features.7.bias'])
 #
-#dct['down1.mpconv.1.conv.0.weight'].data.copy_(dctvgg['features.5.weight'])
-#dct['down1.mpconv.1.conv.0.bias'].data.copy_(dctvgg['features.5.bias'])
+dct['down2.mpconv.1.conv.0.weight'].data.copy_(dctvgg['features.10.weight'])
+dct['down2.mpconv.1.conv.0.bias'].data.copy_(dctvgg['features.10.bias'])
 #
-#dct['down1.mpconv.1.conv.3.weight'].data.copy_(dctvgg['features.7.weight'])
-#dct['down1.mpconv.1.conv.3.bias'].data.copy_(dctvgg['features.7.bias'])
+dct['down2.mpconv.1.conv.3.weight'].data.copy_(dctvgg['features.12.weight'])
+dct['down2.mpconv.1.conv.3.bias'].data.copy_(dctvgg['features.12.bias'])
 #
-#dct['down2.mpconv.1.conv.0.weight'].data.copy_(dctvgg['features.10.weight'])
-#dct['down2.mpconv.1.conv.0.bias'].data.copy_(dctvgg['features.10.bias'])
+dct['down3.mpconv.1.conv.0.weight'].data.copy_(dctvgg['features.15.weight'])
+dct['down3.mpconv.1.conv.0.bias'].data.copy_(dctvgg['features.15.bias'])
 #
-#dct['down2.mpconv.1.conv.3.weight'].data.copy_(dctvgg['features.12.weight'])
-#dct['down2.mpconv.1.conv.3.bias'].data.copy_(dctvgg['features.12.bias'])
+dct['down3.mpconv.1.conv.3.weight'].data.copy_(dctvgg['features.17.weight'])
+dct['down3.mpconv.1.conv.3.bias'].data.copy_(dctvgg['features.17.bias'])
 #
-#dct['down3.mpconv.1.conv.0.weight'].data.copy_(dctvgg['features.15.weight'])
-#dct['down3.mpconv.1.conv.0.bias'].data.copy_(dctvgg['features.15.bias'])
+dct['down4.mpconv.1.conv.0.weight'].data.copy_(dctvgg['features.20.weight'])
+dct['down4.mpconv.1.conv.0.bias'].data.copy_(dctvgg['features.20.bias'])
 #
-#dct['down3.mpconv.1.conv.3.weight'].data.copy_(dctvgg['features.17.weight'])
-#dct['down3.mpconv.1.conv.3.bias'].data.copy_(dctvgg['features.17.bias'])
+dct['down4.mpconv.1.conv.3.weight'].data.copy_(dctvgg['features.22.weight'])
+dct['down4.mpconv.1.conv.3.bias'].data.copy_(dctvgg['features.22.bias'])
 #
-#dct['down4.mpconv.1.conv.0.weight'].data.copy_(dctvgg['features.20.weight'])
-#dct['down4.mpconv.1.conv.0.bias'].data.copy_(dctvgg['features.20.bias'])
-#
-#dct['down4.mpconv.1.conv.3.weight'].data.copy_(dctvgg['features.22.weight'])
-#dct['down4.mpconv.1.conv.3.bias'].data.copy_(dctvgg['features.22.bias'])
-#
-#model.load_state_dict(dct)
+model.load_state_dict(dct)
 
 
 writer = SummaryWriter()
@@ -108,7 +108,7 @@ device = torch.device("cuda:"+str(gpu_id) if torch.cuda.is_available() else "cpu
 if torch.cuda.device_count() > 1:
     print('using gpus')
     model = DataParallel(model,device_ids=range(torch.cuda.device_count()))
-model.load_state_dict('model.pth')
+#model.load_state_dict(torch.load('model.pth',map_location='cpu'))
 model.to(device)
 
 
@@ -178,6 +178,8 @@ def train_model(model,optimizer,scheduler,num_epochs=10):
             for batched in data_dict[phase]:
                 print('batch')
                 images, sem_labels,instances,annid = batched
+                images = torch.stack(images)
+                sem_labels = torch.stack(sem_labels)
                 images = images.float().to(device)
                 sem_labels = sem_labels.long().to(device)
                 optimizer.zero_grad()
