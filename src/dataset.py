@@ -103,7 +103,13 @@ class CocoDetection(Dataset):
             anns = self.coco.loadAnns(annIds)
             if anns == []:
                 rejects.append(val)
-                ctr+=1
+                ctr+=1 
+           # else:
+           #     for i in range(len(anns)):
+           #         if np.sum(self.coco.annToMask(anns[i])) < 5:
+           #             rejects.append(val)
+           #             break
+
         self.ids = list(set(init_ids) - set(rejects))
 
         dct = {}
@@ -158,15 +164,17 @@ class CocoDetection(Dataset):
         
         for i in range(len(anns)):
             if anns[i]['category_id'] in self.reindex:
-                new_anns.append(self.reindex[anns[i]['category_id']])
                 arr_img = coco.annToMask(anns[i])
                 resized = cv2.resize(arr_img,dsize=(shap[0],shap[1]),interpolation=cv2.INTER_NEAREST)
                 if np.max(resized) != 1:
                     resized[np.nonzero(resized)] = 1
                         #print(np.max(resized))
-                bgnd.append(resized)
-                instances.append(resized)
-                target.append(resized*new_anns[-1])
+                if np.sum(resized) >= 1:
+                    bgnd.append(resized)
+                    new_anns.append(self.reindex[anns[i]['category_id']])
+                    instances.append(resized)
+                    target.append(resized*new_anns[-1])
+                
         #bgnd = sum(bgnd)
         #bgnd[np.nonzero(bgnd)] = 1
         #bgnd = 1 - bgnd
@@ -176,11 +184,15 @@ class CocoDetection(Dataset):
         sorted_anns = np.sort(new_anns)
         instances = np.array(instances)
         #print(instances.shape)
-        instances = instances[sort_order,:,:]
-        
-        
-        target = np.array(target)
-        target = np.max(target,axis=0)
+        if sort_order.size == 0:
+            instances = np.zeros((1,shap[1],shap[0]),dtype='uint8')
+            #sort_order = [0]
+            sorted_anns = np.ones(1,dtype='int64')
+            target = np.zeros((shap[1],shap[0]),dtype='uint8') 
+        else:
+            instances = instances[sort_order,:,:]
+            target = np.array(target)
+            target = np.max(target,axis=0)
         #padding
         pad_amt = new_size - min_size
         pad_left = pad_amt//2
@@ -208,7 +220,7 @@ class CocoDetection(Dataset):
 
         target = torch.from_numpy(target)
         instances = torch.from_numpy(pad_instances)
-        
+        #sorted_anns = torch.from_numpy(sorted_anns)      
         if self.transform is not None:
             img = self.transform(img)
         

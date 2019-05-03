@@ -32,50 +32,63 @@ class DiscriminativeLoss(_Loss):
         return self._discriminative_loss(input, target, n_clusters)
     
     def _discriminative_loss(self, image, instances_bs, annid):
+        class_loss = torch.zeros(40,4).cuda()
+        coeffs = torch.zeros(3).cuda()
+        coeffs[0] = self.alpha
+        coeffs[1] = self.beta
+        coeffs[2] = self.gamma
+        class_dist = torch.zeros(1).cuda()
         for i in range(image.size(0)):
             img = image[i,:,:,:]
-            instances = instances_bs[i]
+            instances = instances_bs[i].float().cuda()
+            annots = annid[i]
             imshape = img.shape
             instshape = instances.shape
+         #   print(i)
+            #print(instances.shape)
             #feats,clusters,h,w
             img = img.unsqueeze(1).expand(imshape[0],instshape[0],imshape[1],imshape[2])
             #1,clusters,h,w
             instances = instances.unsqueeze(0)
             
             
-            mns = cluster_means(img,instances)
-            cvar = cluster_vars(img,instances,mns)
-            uniqids = np.unique(annid[i])
+            mns = self.cluster_means(img,instances)
+            cvar = self.cluster_vars(img,instances,mns)
+            uniqids = np.unique(annots)
             mean_of_class = []
             
             for val in uniqids:
-                indices = np.where(annid[i]==val)
+                indices = np.where(annots==val)
                 if len(indices[0]) > 1:
-                    dist_intra = distances(mns,indices[0],self.delta_dist_intra)
+                    dist_intra = self.distances(mns,indices[0],self.delta_dist_intra)
                     var_intra = cvar[indices[0]].mean()
-                    reg_term = torch.mean(torch.norm(mns[:,indices[0]],1,0))
+                    reg_term = torch.mean(torch.norm(mns[:,indices[0]],2,0))
                     mean_of_class.append(torch.t(mns[:,indices[0]].mean(dim=1).view(1,-1)))
                 else:
-                    dist_intra = torch.zeros(1)[0]
+                    dist_intra = torch.zeros(1)[0].cuda()
                     var_intra = cvar[indices[0]][0]
-                    reg_term = torch.norm(mns[:,indices[0]],1,0)[0]
+                    reg_term = torch.norm(mns[:,indices[0]],2,0)[0]
                     mean_of_class.append(mns[:,indices[0]])
                 class_loss[val-1,0] += var_intra
                 class_loss[val-1,1] += dist_intra
                 class_loss[val-1,2] += reg_term
-                class_loss[val-1,3] += torch.ones(1)[0]
+                class_loss[val-1,3] += torch.ones(1)[0].cuda()
+            #print(var_intra,dist_intra,reg_term)
             mns_mean = torch.stack(mean_of_class,dim=1)[:,:,0]
-            class_dist += distances(mns_mean,np.arange(mns_mean.shape[1]),self.delta_dist_inter)
-
-        scaled_loss = class_loss[:,:3]/(class_loss[:,3].unsqueeze(1).expand(40,3)+eps)
-        loss = torch.mm(scaled_loss,nn.view(-1,1)).sum() + class_dist/len(image)
+            class_dist += self.distances(mns_mean,np.arange(mns_mean.shape[1]),self.delta_dist_inter)
+            #print(class_dist)
+        
+        #print(class_loss)
+        scaled_loss = class_loss[:,:3]/(class_loss[:,3].unsqueeze(1).expand(40,3)+self.eps)
+        loss = torch.mm(scaled_loss,coeffs.view(-1,1)).sum() + class_dist/image.size(0)
         return loss
     
-    def cluster_means(img,instances):
+    def cluster_means(self,img,instances):
         #feats,clusters,h,w
         result = img.float()*instances.float()
         #feats,clusters
-        means = result.sum(dim=[2,3])/instances.sum(dim=[2,3]).float()
+        #print(instances.sum(dim=[2,3]))
+        means = result.sum(dim=[2,3])/(instances.sum(dim=[2,3])+self.eps)
         return(means)
 
     def cluster_vars(self,img,instances,means):
@@ -83,13 +96,13 @@ class DiscriminativeLoss(_Loss):
         mn_shape = means.shape
         means = means.unsqueeze(2).expand(mn_shape[0],mn_shape[1],256*256)
         means = means.view(mn_shape[0],mn_shape[1],256,256)
-        var = (torch.clamp(torch.norm((img - means),1,0) - self.delta_var,min=0)**2) * instances[0,:,:,:].float()
+        var = (torch.clamp(torch.norm((img - means),2,0) - self.delta_var,min=0)**2) * instances[0,:,:,:]
         
-        new_var = var.sum([1,2])/instances[0,:].float().sum([1,2])
+        new_var = var.sum([1,2])/(instances[0,:].sum([1,2])+self.eps)
         
         return new_var
 
-    def distances(means,indices,delta_dist):
+    def distances(self,means,indices,delta_dist):
         
         if means.shape[1] > 1:
             
@@ -98,10 +111,10 @@ class DiscriminativeLoss(_Loss):
             temp_mb = temp_ma.permute(0,2,1)
             diff = temp_ma - temp_mb
             margin = 2*delta_dist*(1-torch.eye(len(indices)))
-            c_dist = torch.sum(torch.clamp(margin-torch.norm(diff,1,0),min=0)**2)
+            c_dist = torch.sum(torch.clamp(margin.cuda()-torch.norm(diff,2,0),min=0)**2)
             
             dist = c_dist/(len(indices)*(len(indices)-1))
         
         else:
-            dist = 0
+            dist = torch.zeros(1).cuda()
         return dist
