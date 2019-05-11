@@ -239,9 +239,9 @@ def my_collate(batch):
 
 #coco dataset training
 train_df = CocoDetection('/data/shaan/train2017','/data/shaan/annotations/instances_train2017.json',catnames=topk_catnames,transform = transforms.ToTensor(),target_transform=transforms.ToTensor())
-train_dataloader = DataLoader(train_df, batch_size =32, shuffle = True, num_workers = 2,collate_fn = my_collate)
+train_dataloader = DataLoader(train_df, batch_size =20, shuffle = True, num_workers = 2,collate_fn = my_collate)
 val_df = CocoDetection('/data/shaan/val2017','/data/shaan/annotations/instances_val2017.json',catnames=topk_catnames,transform = transforms.ToTensor(),target_transform=transforms.ToTensor())
-val_dataloader = DataLoader(val_df, batch_size =32, num_workers = 2,collate_fn=my_collate)
+val_dataloader = DataLoader(val_df, batch_size =20, num_workers = 2,collate_fn=my_collate)
 
 
 
@@ -324,8 +324,8 @@ def train_model(model,optimizer,scheduler,num_epochs=10):
                         
                         writer.add_scalar('jacc(iou)_val_batch',jacc_bvalue,n_iter_val)
                         writer.add_scalar('CELoss_val_batch',loss,n_iter_val)
-
-                    running_losses += loss.cpu().data.tolist()*images.size(0)
+                    print(loss,ce_loss,disc_loss)
+                    running_losses += loss.cpu().data.tolist()[0]*images.size(0)
                     running_ious += jacc_bvalue*images.size(0)
             avg_loss =running_losses/len(data_dict[phase].dataset)
             avg_iou = running_ious/len(data_dict[phase].dataset)
