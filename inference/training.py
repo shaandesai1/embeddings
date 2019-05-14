@@ -239,9 +239,9 @@ def my_collate(batch):
 
 #coco dataset training
 train_df = CocoDetection('/data/shaan/train2017','/data/shaan/annotations/instances_train2017.json',catnames=topk_catnames,transform = transforms.ToTensor(),target_transform=transforms.ToTensor())
-train_dataloader = DataLoader(train_df, batch_size =20, shuffle = True, num_workers = 2,collate_fn = my_collate)
+train_dataloader = DataLoader(train_df, batch_size =15, shuffle = True, num_workers = 2,collate_fn = my_collate)
 val_df = CocoDetection('/data/shaan/val2017','/data/shaan/annotations/instances_val2017.json',catnames=topk_catnames,transform = transforms.ToTensor(),target_transform=transforms.ToTensor())
-val_dataloader = DataLoader(val_df, batch_size =20, num_workers = 2,collate_fn=my_collate)
+val_dataloader = DataLoader(val_df, batch_size =15, num_workers = 2,collate_fn=my_collate)
 
 
 
@@ -251,9 +251,9 @@ data_dict = {'train': train_dataloader, 'validation': val_dataloader}
 #                                    delta_dist=1.5,
 #                                    norm=2,
 #                                    usegpu=True)
-
+weight = [1,3,37,39,7,85,126,33,221,41,71,241,107,236,143,191,73,102,42,54,514,1592,381,40,83,33,316,25,140,33,679,745,66,51,212,401,422,81,152,148,30]
 #ignore padding
-criterion_ce = nn.CrossEntropyLoss(ignore_index=99).cuda()
+criterion_ce = nn.CrossEntropyLoss(ignore_index=99,weight=torch.Tensor(weight)).cuda()
 discriminative_loss = DiscriminativeLoss().cuda()
 # Optimizer
 parameters = model.parameters()
@@ -305,7 +305,7 @@ def train_model(model,optimizer,scheduler,num_epochs=10):
                     ss = F.softmax(sem_predict,dim=1)
                     yp = torch.argmax(ss,dim=1).cpu()
                     yt = sem_labels.cpu()
-                    print(yt.shape)                   
+                                
                     loss = ce_loss + disc_loss
                     jacc_bvalue = jacc(yt.numpy().reshape(-1),yp.numpy().reshape(-1))
                 
@@ -320,6 +320,7 @@ def train_model(model,optimizer,scheduler,num_epochs=10):
                         for i in range(images.size(0)):
                             overlap = np.mean(np.diag(get_bin_map(yt[i,:,:],yp[i,:,:])))
                             semantic_ious += overlap
+                            print("overlap:" +str(overlap))
                             writer.add_scalar('semantic(iou)_val_batch',overlap,n_iter_val)
                         
                         writer.add_scalar('jacc(iou)_val_batch',jacc_bvalue,n_iter_val)
