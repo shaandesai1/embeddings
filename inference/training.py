@@ -203,7 +203,7 @@ def compute_overlaps_masks(masks1, masks2):
 # intersections and union
     intersections = np.dot(masks1.T, masks2)
     union = area1[:, None] + area2[None, :] - intersections
-    overlaps = intersections / union
+    overlaps = intersections / (union+1e-6)
     
     return overlaps
 
@@ -300,14 +300,14 @@ def train_model(model,optimizer,scheduler,num_epochs=10):
                 
                     inst_predict,sem_predict = model(images)
                     ce_loss = criterion_ce(sem_predict,sem_labels)
-                    disc_loss = discriminative_loss(inst_predict,instances,annid)
+                    disc_loss = 0.1*discriminative_loss(inst_predict,instances,annid)
                     
                     ss = F.softmax(sem_predict,dim=1)
-                    yp = torch.argmax(ss,dim=1).cpu().numpy().reshape(-1)
-                    yt = sem_labels.cpu().numpy().reshape(-1)
-                    
+                    yp = torch.argmax(ss,dim=1).cpu()
+                    yt = sem_labels.cpu()
+                    print(yt.shape)                   
                     loss = ce_loss + disc_loss
-                    jacc_bvalue = jacc(yt,yp)
+                    jacc_bvalue = jacc(yt.numpy().reshape(-1),yp.numpy().reshape(-1))
                 
                     if phase == 'train':
                         n_iter_tr += 1
