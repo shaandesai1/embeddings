@@ -102,6 +102,41 @@ model.load_state_dict(dct)
 writer = SummaryWriter()
 
 
+def compute_overlaps_masks(masks1, masks2):
+    """Computes IoU overlaps between two sets of masks.
+        masks1, masks2: [Height, Width, instances]
+        """
+    
+    # If either set of masks is empty return empty result
+    if masks1.shape[-1] == 0 or masks2.shape[-1] == 0:
+        return np.zeros((masks1.shape[-1], masks2.shape[-1]))
+    # flatten masks and compute their areas
+    masks1 = np.reshape(masks1 > .5, (-1, masks1.shape[-1])).astype(np.float32)
+    masks2 = np.reshape(masks2 > .5, (-1, masks2.shape[-1])).astype(np.float32)
+    area1 = np.sum(masks1, axis=0)
+    area2 = np.sum(masks2, axis=0)
+
+# intersections and union
+    intersections = np.dot(masks1.T, masks2)
+    union = area1[:, None] + area2[None, :] - intersections
+    overlaps = intersections / union
+    
+    return overlaps
+
+def get_bin_map(true_msk,pred_msk):
+    ids = list(set(np.unique(true_msk)) -set([0,99]))
+    all_collate = np.zeros((256,256,len(ids),2))
+    #     for i,val in enumerate(ids):
+    #         tsmsk = (true_msk == val)*1
+    #         pmsk = (pred_msk == val)*1
+    #         all_collate[:,:,i,0] = tsmsk
+    #         all_collate[:,:,i,1] = pmsk
+    all_collate[:,:,:,0] = true_msk.unsqueeze(2).expand(256,256,len(ids)).float() == (torch.ones((256,256,len(ids)))*torch.Tensor(ids)).float()
+    all_collate[:,:,:,1] = pred_msk.unsqueeze(2).expand(256,256,len(ids)).float() == (torch.ones((256,256,len(ids)))*torch.Tensor(ids)).float()
+    
+    
+    return compute_overlaps_masks(all_collate[:,:,:,1],all_collate[:,:,:,0])
+
 # Model
 gpu_id = 0
 device = torch.device("cuda:"+str(gpu_id) if torch.cuda.is_available() else "cpu")
@@ -139,8 +174,9 @@ data_dict = {'train': train_dataloader, 'validation': val_dataloader}
 #                                    norm=2,
 #                                    usegpu=True)
 
-#ignore padding
-criterion_ce = nn.CrossEntropyLoss(ignore_index=99).cuda()
+weights = [1,3,37,39,7,85,126,33,221,41,71,241,107,236,143,191,73,102,42,54,514,1592,381,40,83,33,316,25,140,33,679,745,66,51,212,401,422,81,152,148,30]
+#e padding
+criterion_ce = nn.CrossEntropyLoss(ignore_index=99,weight=torch.Tensor(weights)).cuda()
 discriminative_loss = DiscriminativeLoss().cuda()
 # Optimizer
 parameters = model.parameters()
@@ -174,7 +210,7 @@ def train_model(model,optimizer,scheduler,num_epochs=10):
             
             running_losses = 0.
             running_ious = 0.
-           
+            semantic_ious = 0.
             for batched in data_dict[phase]:
                 print('batch')
                 images, sem_labels,instances,annid = batched
@@ -187,27 +223,34 @@ def train_model(model,optimizer,scheduler,num_epochs=10):
                 
                     inst_predict,sem_predict = model(images)
                     ce_loss = criterion_ce(sem_predict,sem_labels)
-                    disc_loss = discriminative_loss(inst_predict,instances,annid)
+                    disc_loss =0.1*discriminative_loss(inst_predict,instances,annid)
                     
                     ss = F.softmax(sem_predict,dim=1)
-                    yp = torch.argmax(ss,dim=1).cpu().numpy().reshape(-1)
-                    yt = sem_labels.cpu().numpy().reshape(-1)
+                    yp = torch.argmax(ss,dim=1).cpu()
+                    yt = sem_labels.cpu()
                     
                     loss = ce_loss + disc_loss
-                    jacc_bvalue = jacc(yt,yp)
+   
+                    jacc_bvalue = jacc(yt.numpy().reshape(-1),yp.numpy().reshape(-1))
                 
                     if phase == 'train':
                         n_iter_tr += 1
+                        
+ 
                         loss.backward()
                         optimizer.step()
                         writer.add_scalar('jacc(iou)_train_batch',jacc_bvalue,n_iter_tr)
                         writer.add_scalar('CELoss_train_batch',loss,n_iter_tr)
                     else:
                         n_iter_val += 1
+                        for i in range(images.size(0)):
+                            overlap = np.mean(np.diag(get_bin_map(yt[i,:,:],yp[i,:,:].float()*torch.Tensor(np.where(yt[i,:,:]!=99,1.,0.)))))
+                            semantic_ious += overlap
+                            writer.add_scalar('semiouvalbatch',overlap,n_iter_val)
                         writer.add_scalar('jacc(iou)_val_batch',jacc_bvalue,n_iter_val)
                         writer.add_scalar('CELoss_val_batch',loss,n_iter_val)
-
-                    running_losses += loss.cpu().data.tolist()*images.size(0)
+                    print(loss)
+                    running_losses += loss.cpu().data.tolist()[0]*images.size(0)
                     running_ious += jacc_bvalue*images.size(0)
             avg_loss =running_losses/len(data_dict[phase].dataset)
             avg_iou = running_ious/len(data_dict[phase].dataset)
@@ -218,6 +261,7 @@ def train_model(model,optimizer,scheduler,num_epochs=10):
             else:
                 writer.add_scalar('jacc(iou)_val_epoch',avg_iou,epoch)
                 writer.add_scalar('CELoss_val_epoch',avg_loss,epoch)
+                writer.add_scalar('sem val epoch',semantic_ious/len(data_dict[phase].dataset),epoch)
          #   scheduler.step(loss)
                 if avg_iou > best_iou:
                     best_iou = avg_iou

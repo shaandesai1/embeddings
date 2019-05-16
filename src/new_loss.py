@@ -51,23 +51,24 @@ class DiscriminativeLoss(_Loss):
             #1,clusters,h,w
             instances = instances.unsqueeze(0)
             
-            
-            mns = self.cluster_means(img,instances)
+            mns = self.cluster_means(img,instances)          
+            #mns,rpts = self.cluster_means(img,instances)
             cvar = self.cluster_vars(img,instances,mns)
+            #rvar = self.cluster_vars(img,instances,rpts)
             uniqids = np.unique(annots)
             mean_of_class = []
             
             for val in uniqids:
                 indices = np.where(annots==val)
                 if len(indices[0]) > 1:
-                    dist_intra = self.distances(mns,indices[0],self.delta_dist_intra)
-                    var_intra = cvar[indices[0]].mean()
-                    reg_term = torch.mean(torch.norm(mns[:,indices[0]],2,0))
+                    dist_intra = self.distances(mns,indices[0],self.delta_dist_intra) #+ self.distances(rpts,indices[0],self.delta_dist_intra)
+                    var_intra = cvar[indices[0]].mean() #+ rvar[indices[0]].mean()
+                    reg_term = torch.mean(torch.norm(mns[:,indices[0]],2,0)) #+ torch.mean(torch.norm(rpts[:,indices[0]],2,0))
                     mean_of_class.append(torch.t(mns[:,indices[0]].mean(dim=1).view(1,-1)))
                 else:
                     dist_intra = torch.zeros(1)[0].cuda()
-                    var_intra = cvar[indices[0]][0]
-                    reg_term = torch.norm(mns[:,indices[0]],2,0)[0]
+                    var_intra = cvar[indices[0]][0] #+ rvar[indices[0]][0]
+                    reg_term = torch.norm(mns[:,indices[0]],2,0)[0] #+ torch.norm(rpts[:,indices[0]],2,0)[0]
                     mean_of_class.append(mns[:,indices[0]])
                 class_loss[val-1,0] += var_intra
                 class_loss[val-1,1] += dist_intra
@@ -89,7 +90,20 @@ class DiscriminativeLoss(_Loss):
         #feats,clusters
         #print(instances.sum(dim=[2,3]))
         means = result.sum(dim=[2,3])/(instances.sum(dim=[2,3])+self.eps)
-        return(means)
+
+
+        #collection = []
+        #for i in range(instances.shape[1]):
+        #    st = torch.nonzero(instances[0,i,:,:])
+        #    if len(st) > 0:
+        #        sample_pt = st[np.random.randint(0,len(st),size=1)]
+        #        collection.append(result[:,i,sample_pt[0][0],sample_pt[0][1]])
+        #    else:
+        #        collection.append(torch.zeros(img.shape[0]).float().cuda())
+
+        #rpts = torch.stack(collection,dim=1)
+
+        return means#,rpts
 
     def cluster_vars(self,img,instances,means):
         #feats,clusters,h*w
