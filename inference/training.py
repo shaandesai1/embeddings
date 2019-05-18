@@ -318,7 +318,7 @@ def train_model(model,optimizer,scheduler,num_epochs=10):
                     else:
                         n_iter_val += 1
                         for i in range(images.size(0)):
-                            overlap = np.mean(np.diag(get_bin_map(yt[i,:,:],yp[i,:,:])))
+                            overlap = np.mean(np.diag(get_bin_map(yt[i,:,:],yp[i,:,:].float()*torch.Tensor(np.where(yt[i,:,:]!=99,1.,0.)))))
                             semantic_ious += overlap
                             print("overlap:" +str(overlap))
                             writer.add_scalar('semantic(iou)_val_batch',overlap,n_iter_val)
