@@ -64,7 +64,7 @@ class DiscriminativeLoss(_Loss):
             for val in uniqids:
                 indices = np.where(annots==val)
                 if len(indices[0]) > 1:
-                    dist_intra = self.distances(mns,indices[0],self.delta_dist_intra) + self.distances(rpts,indices[0],self.delta_dist_intra)
+                    dist_intra = self.distances(mns,indices[0],self.delta_dist_intra) 
                     var_intra = cvar[indices[0]].mean() + rvar[indices[0]].mean()
                     reg_term = torch.mean(torch.norm(mns[:,indices[0]],2,0)) + torch.mean(torch.norm(rpts[:,indices[0]],2,0))
                     mean_of_class.append(torch.t(mns[:,indices[0]].mean(dim=1).view(1,-1)))
