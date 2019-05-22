@@ -210,9 +210,9 @@ class CocoDetection(Dataset):
             else:
                 pad_instances[i,:,:] = cv2.copyMakeBorder(instances[i,:,:],0,0,pad_left,pad_right,cv2.BORDER_CONSTANT,value=0)
 
-        ones = torch.ones(shap[1],shap[0])
-        eyes = torch.arange(-1,1,2/shap[0]) * ones
-        jays = (torch.arange(-1,1,2/shap[1]).t() * ones).t()
+        ones = np.ones((shap[1],shap[0]))
+        eyes = np.linspace(-1,1,shap[0]) * ones
+        jays = (np.linspace(-1,1,shap[1]) * ones.T).T
 
 
         #for i in range(len(target)):
@@ -225,7 +225,7 @@ class CocoDetection(Dataset):
             eyes = cv2.copyMakeBorder(eyes,0,0,pad_left,pad_right,cv2.BORDER_CONSTANT,value=0)
             jays = cv2.copyMakeBorder(jays,0,0,pad_left,pad_right,cv2.BORDER_CONSTANT,value=0)
         
-        coords = torch.stack([eyes,jays])
+        coords = torch.from_numpy(np.stack([eyes,jays],axis=0))
         
         target = torch.from_numpy(target)
         instances = torch.from_numpy(pad_instances)

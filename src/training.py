@@ -22,7 +22,7 @@ from torch.nn import DataParallel
 
 import torchvision.utils as vutils
 from tensorboardX import SummaryWriter
-from sklearn.metrics import jaccard_similarity_score as jacc
+from sklearn.metrics import jaccard_score as jacc
 
 from pycocotools.coco import COCO
 
@@ -155,15 +155,17 @@ def my_collate(batch):
     instance = [item[2] for item in batch]
     
     annid = [item[3] for item in batch]
+
+    coord = [item[4] for item in batch]
     #instance = torch.LongTensor(instance)
     #annid = torch.LongTensor(annid)
-    return [img,mask,instance,annid]
+    return [img,mask,instance,annid,coord]
 
 #coco dataset training
 train_df = CocoDetection('/data/shaan/train2017','/data/shaan/annotations/instances_train2017.json',catnames=topk_catnames,transform = transforms.ToTensor(),target_transform=transforms.ToTensor())
-train_dataloader = DataLoader(train_df, batch_size =32, shuffle = True, num_workers = 2,collate_fn = my_collate)
+train_dataloader = DataLoader(train_df, batch_size =16, shuffle = True, num_workers = 2,collate_fn = my_collate)
 val_df = CocoDetection('/data/shaan/val2017','/data/shaan/annotations/instances_val2017.json',catnames=topk_catnames,transform = transforms.ToTensor(),target_transform=transforms.ToTensor())
-val_dataloader = DataLoader(val_df, batch_size =32, num_workers = 2,collate_fn=my_collate)
+val_dataloader = DataLoader(val_df, batch_size =16, num_workers = 2,collate_fn=my_collate)
 
 
 
@@ -174,13 +176,13 @@ data_dict = {'train': train_dataloader, 'validation': val_dataloader}
 #                                    norm=2,
 #                                    usegpu=True)
 
-weights = [1,3,37,39,7,85,126,33,221,41,71,241,107,236,143,191,73,102,42,54,514,1592,381,40,83,33,316,25,140,33,679,745,66,51,212,401,422,81,152,148,30]
+weights = [1,1,3.7,3.9,1,8.5,12.6/2,3.3,22.1/2,4.1,7.1,24.1/2,10.7/2,23.6/2,14.3/2,19.1/2,7.3,10.2/2,4.2,5.4,51.4/2,1592/40,38.1/2,4.0,8.3,3.3,31.6/2,2.5,14.0/2,3.3,67.9/2,74.5/2,6.6,5.1,21.2/2,40.1/2,42.2/2,8.1,15.2/2,14.8/2,3.0]
 #e padding
 criterion_ce = nn.CrossEntropyLoss(ignore_index=99,weight=torch.Tensor(weights)).cuda()
 discriminative_loss = DiscriminativeLoss().cuda()
 # Optimizer
 parameters = model.parameters()
-optimizer = optim.SGD(parameters, lr=0.01, momentum=0.9, weight_decay=0.001)
+optimizer = optim.Adam(parameters, lr=1e-3)
     #scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer,
     #                                             mode='min',
     #                                             factor=0.1,
@@ -218,15 +220,15 @@ def train_model(model,optimizer,scheduler,num_epochs=10):
                 coords = torch.stack(coords)
                 sem_labels = torch.stack(sem_labels)
                 images = images.float().to(device)
-                coords = coords.to(device)
+                coords = coords.float().to(device)
                 sem_labels = sem_labels.long().to(device)
                 optimizer.zero_grad()
                 with torch.set_grad_enabled(phase =='train'):
                 
                     inst_predict,sem_predict = model(images)
-                    inst_pred = torch.cat([inst_pred,coords],dim=1)
+                    inst_predict = torch.cat([inst_predict,coords],dim=1)
                     ce_loss = criterion_ce(sem_predict,sem_labels)
-                    disc_loss =0.1*discriminative_loss(inst_predict,instances,annid)
+                    disc_loss =0.1*discriminative_loss(inst_predict,instances,annid,epoch)
                     
                     ss = F.softmax(sem_predict,dim=1)
                     yp = torch.argmax(ss,dim=1).cpu()
@@ -234,7 +236,7 @@ def train_model(model,optimizer,scheduler,num_epochs=10):
                     
                     loss = ce_loss + disc_loss
    
-                    jacc_bvalue = jacc(yt.numpy().reshape(-1),yp.numpy().reshape(-1))
+                    jacc_bvalue = jacc(yt.numpy().reshape(-1),yp.numpy().reshape(-1),average='weighted')
                 
                     if phase == 'train':
                         n_iter_tr += 1
