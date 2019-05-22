@@ -210,14 +210,23 @@ class CocoDetection(Dataset):
             else:
                 pad_instances[i,:,:] = cv2.copyMakeBorder(instances[i,:,:],0,0,pad_left,pad_right,cv2.BORDER_CONSTANT,value=0)
 
+        ones = torch.ones(shap[1],shap[0])
+        eyes = torch.arange(-1,1,2/shap[0]) * ones
+        jays = (torch.arange(-1,1,2/shap[1]).t() * ones).t()
 
 
         #for i in range(len(target)):
         if sz[0] > sz[1]:
             target = cv2.copyMakeBorder(target,pad_left,pad_right,0,0,cv2.BORDER_CONSTANT,value=99)
+            eyes = cv2.copyMakeBorder(eyes,pad_left,pad_right,0,0,cv2.BORDER_CONSTANT,value=0)
+            jays = cv2.copyMakeBorder(jays,pad_left,pad_right,0,0,cv2.BORDER_CONSTANT,value=0)
         else:
             target = cv2.copyMakeBorder(target,0,0,pad_left,pad_right,cv2.BORDER_CONSTANT,value=99)
-
+            eyes = cv2.copyMakeBorder(eyes,0,0,pad_left,pad_right,cv2.BORDER_CONSTANT,value=0)
+            jays = cv2.copyMakeBorder(jays,0,0,pad_left,pad_right,cv2.BORDER_CONSTANT,value=0)
+        
+        coords = torch.stack([eyes,jays])
+        
         target = torch.from_numpy(target)
         instances = torch.from_numpy(pad_instances)
         #sorted_anns = torch.from_numpy(sorted_anns)      
@@ -226,7 +235,7 @@ class CocoDetection(Dataset):
         
         if self.target_transform is not None:
             pass
-        return img, target, instances, sorted_anns
+        return img, target, instances, sorted_anns,coords
     
     
     def __len__(self):

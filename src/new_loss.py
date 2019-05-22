@@ -27,11 +27,11 @@ class DiscriminativeLoss(_Loss):
         self.usegpu = usegpu
         assert self.norm in [1, 2]
     
-    def forward(self, input, target, n_clusters):
+    def forward(self, input, target, n_clusters,epoch):
         #_assert_no_grad(target)
-        return self._discriminative_loss(input, target, n_clusters)
+        return self._discriminative_loss(input, target, n_clusters,epoch)
     
-    def _discriminative_loss(self, image, instances_bs, annid):
+    def _discriminative_loss(self, image, instances_bs, annid,epoch):
         class_loss = torch.zeros(40,4).cuda()
         coeffs = torch.zeros(3).cuda()
         coeffs[0] = self.alpha
@@ -51,7 +51,7 @@ class DiscriminativeLoss(_Loss):
             #1,clusters,h,w
             instances = instances.unsqueeze(0)
             
-            mns = self.cluster_means(img,instances)          
+            mns = self.cluster_means(img,instances,epoch)
             #mns,rpts = self.cluster_means(img,instances)
             cvar = self.cluster_vars(img,instances,mns)
             #rvar = self.cluster_vars(img,instances,rpts)
@@ -84,26 +84,26 @@ class DiscriminativeLoss(_Loss):
         loss = torch.mm(scaled_loss,coeffs.view(-1,1)).sum() + class_dist/image.size(0)
         return loss
     
-    def cluster_means(self,img,instances):
+    def cluster_means(self,img,instances,epoch):
         #feats,clusters,h,w
         result = img.float()*instances.float()
         #feats,clusters
         #print(instances.sum(dim=[2,3]))
-        means = result.sum(dim=[2,3])/(instances.sum(dim=[2,3])+self.eps)
+#        means = result.sum(dim=[2,3])/(instances.sum(dim=[2,3])+self.eps)
 
 
-        #collection = []
-        #for i in range(instances.shape[1]):
-        #    st = torch.nonzero(instances[0,i,:,:])
-        #    if len(st) > 0:
-        #        sample_pt = st[np.random.randint(0,len(st),size=1)]
-        #        collection.append(result[:,i,sample_pt[0][0],sample_pt[0][1]])
-        #    else:
-        #        collection.append(torch.zeros(img.shape[0]).float().cuda())
+        collection = []
+        for i in range(instances.shape[1]):
+            st = torch.nonzero(instances[0,i,:,:])
+            if len(st) > 0:
+                sample_pt = st[np.random.randint(0,len(st),size=max(1,int(((100-5*epoch)/100)*len(st))))]
+                collection.append(result[:,i,sample_pt[:,0],sample_pt[:,1]].sum(dim=1)/(instances[0,i,sample_pt[:,0],sample_pt[:,1]].sum(dim=1)+self.eps))
+            else:
+                collection.append(torch.zeros(img.shape[0]).float().cuda())
 
-        #rpts = torch.stack(collection,dim=1)
+        rpts = torch.stack(collection,dim=1)
 
-        return means#,rpts
+        return rpts
 
     def cluster_vars(self,img,instances,means):
         #feats,clusters,h*w

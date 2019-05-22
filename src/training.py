@@ -213,15 +213,18 @@ def train_model(model,optimizer,scheduler,num_epochs=10):
             semantic_ious = 0.
             for batched in data_dict[phase]:
                 print('batch')
-                images, sem_labels,instances,annid = batched
+                images, sem_labels,instances,annid,coords = batched
                 images = torch.stack(images)
+                coords = torch.stack(coords)
                 sem_labels = torch.stack(sem_labels)
                 images = images.float().to(device)
+                coords = coords.to(device)
                 sem_labels = sem_labels.long().to(device)
                 optimizer.zero_grad()
                 with torch.set_grad_enabled(phase =='train'):
                 
                     inst_predict,sem_predict = model(images)
+                    inst_pred = torch.cat([inst_pred,coords],dim=1)
                     ce_loss = criterion_ce(sem_predict,sem_labels)
                     disc_loss =0.1*discriminative_loss(inst_predict,instances,annid)
                     
