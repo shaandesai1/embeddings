@@ -52,50 +52,109 @@ for i in range(global_classes):
     
 
 
-
-
-
-
-
-#if pretrain == 1:
-
-
-vgg13 = models.vgg13(pretrained=True)
+vgg16= models.vgg16_bn(pretrained=True)
 model = UNet()
 
-dctvgg = vgg13.state_dict()
+dctvgg = vgg16.state_dict()
 dct = model.state_dict()
 
 dct['inc.conv.conv.0.weight'].data.copy_(dctvgg['features.0.weight'])#
 dct['inc.conv.conv.0.bias'].data.copy_(dctvgg['features.0.bias'])
-#
-dct['inc.conv.conv.3.weight'].data.copy_(dctvgg['features.2.weight'])
-dct['inc.conv.conv.3.bias'].data.copy_(dctvgg['features.2.bias'])
-#
-dct['down1.mpconv.1.conv.0.weight'].data.copy_(dctvgg['features.5.weight'])
-dct['down1.mpconv.1.conv.0.bias'].data.copy_(dctvgg['features.5.bias'])
-#
-dct['down1.mpconv.1.conv.3.weight'].data.copy_(dctvgg['features.7.weight'])
-dct['down1.mpconv.1.conv.3.bias'].data.copy_(dctvgg['features.7.bias'])
-#
-dct['down2.mpconv.1.conv.0.weight'].data.copy_(dctvgg['features.10.weight'])
-dct['down2.mpconv.1.conv.0.bias'].data.copy_(dctvgg['features.10.bias'])
-#
-dct['down2.mpconv.1.conv.3.weight'].data.copy_(dctvgg['features.12.weight'])
-dct['down2.mpconv.1.conv.3.bias'].data.copy_(dctvgg['features.12.bias'])
-#
-dct['down3.mpconv.1.conv.0.weight'].data.copy_(dctvgg['features.15.weight'])
-dct['down3.mpconv.1.conv.0.bias'].data.copy_(dctvgg['features.15.bias'])
-#
-dct['down3.mpconv.1.conv.3.weight'].data.copy_(dctvgg['features.17.weight'])
-dct['down3.mpconv.1.conv.3.bias'].data.copy_(dctvgg['features.17.bias'])
-#
-dct['down4.mpconv.1.conv.0.weight'].data.copy_(dctvgg['features.20.weight'])
-dct['down4.mpconv.1.conv.0.bias'].data.copy_(dctvgg['features.20.bias'])
-#
-dct['down4.mpconv.1.conv.3.weight'].data.copy_(dctvgg['features.22.weight'])
-dct['down4.mpconv.1.conv.3.bias'].data.copy_(dctvgg['features.22.bias'])
-#
+dct['inc.conv.conv.1.weight'].data.copy_(dctvgg['features.1.weight'])#
+dct['inc.conv.conv.1.bias'].data.copy_(dctvgg['features.1.bias'])
+dct['inc.conv.conv.1.running_mean'].data.copy_(dctvgg['features.1.running_mean'])#
+dct['inc.conv.conv.1.running_var'].data.copy_(dctvgg['features.1.running_var'])
+
+
+dct['inc.conv.conv.3.weight'].data.copy_(dctvgg['features.3.weight'])
+dct['inc.conv.conv.3.bias'].data.copy_(dctvgg['features.3.bias'])
+dct['inc.conv.conv.4.weight'].data.copy_(dctvgg['features.4.weight'])#
+dct['inc.conv.conv.4.bias'].data.copy_(dctvgg['features.4.bias'])
+dct['inc.conv.conv.4.running_mean'].data.copy_(dctvgg['features.4.running_mean'])#
+dct['inc.conv.conv.4.running_var'].data.copy_(dctvgg['features.4.running_var'])
+
+
+dct['down1.mpconv.1.conv.0.weight'].data.copy_(dctvgg['features.7.weight'])
+dct['down1.mpconv.1.conv.0.bias'].data.copy_(dctvgg['features.7.bias'])
+dct['down1.mpconv.1.conv.1.weight'].data.copy_(dctvgg['features.8.weight'])#
+dct['down1.mpconv.1.conv.1.bias'].data.copy_(dctvgg['features.8.bias'])
+dct['down1.mpconv.1.conv.1.running_mean'].data.copy_(dctvgg['features.8.running_mean'])#
+dct['down1.mpconv.1.conv.1.running_var'].data.copy_(dctvgg['features.8.running_var'])
+
+dct['down1.mpconv.1.conv.3.weight'].data.copy_(dctvgg['features.10.weight'])
+dct['down1.mpconv.1.conv.3.bias'].data.copy_(dctvgg['features.10.bias'])
+dct['down1.mpconv.1.conv.4.weight'].data.copy_(dctvgg['features.11.weight'])#
+dct['down1.mpconv.1.conv.4.bias'].data.copy_(dctvgg['features.11.bias'])
+dct['down1.mpconv.1.conv.4.running_mean'].data.copy_(dctvgg['features.11.running_mean'])#
+dct['down1.mpconv.1.conv.4.running_var'].data.copy_(dctvgg['features.11.running_var'])
+
+
+dct['down2.mpconv.1.conv.0.weight'].data.copy_(dctvgg['features.14.weight'])
+dct['down2.mpconv.1.conv.0.bias'].data.copy_(dctvgg['features.14.bias'])
+dct['down2.mpconv.1.conv.1.weight'].data.copy_(dctvgg['features.15.weight'])#
+dct['down2.mpconv.1.conv.1.bias'].data.copy_(dctvgg['features.15.bias'])
+dct['down2.mpconv.1.conv.1.running_mean'].data.copy_(dctvgg['features.15.running_mean'])#
+dct['down2.mpconv.1.conv.1.running_var'].data.copy_(dctvgg['features.15.running_var'])
+
+dct['down2.mpconv.1.conv.3.weight'].data.copy_(dctvgg['features.17.weight'])
+dct['down2.mpconv.1.conv.3.bias'].data.copy_(dctvgg['features.17.bias'])
+dct['down2.mpconv.1.conv.4.weight'].data.copy_(dctvgg['features.18.weight'])#
+dct['down2.mpconv.1.conv.4.bias'].data.copy_(dctvgg['features.18.bias'])
+dct['down2.mpconv.1.conv.4.running_mean'].data.copy_(dctvgg['features.18.running_mean'])#
+dct['down2.mpconv.1.conv.4.running_var'].data.copy_(dctvgg['features.18.running_var'])
+
+dct['down2.mpconv.1.conv.6.weight'].data.copy_(dctvgg['features.20.weight'])
+dct['down2.mpconv.1.conv.6.bias'].data.copy_(dctvgg['features.20.bias'])
+dct['down2.mpconv.1.conv.7.weight'].data.copy_(dctvgg['features.21.weight'])#
+dct['down2.mpconv.1.conv.7.bias'].data.copy_(dctvgg['features.21.bias'])
+dct['down2.mpconv.1.conv.7.running_mean'].data.copy_(dctvgg['features.21.running_mean'])#
+dct['down2.mpconv.1.conv.7.running_var'].data.copy_(dctvgg['features.21.running_var'])
+
+
+dct['down3.mpconv.1.conv.0.weight'].data.copy_(dctvgg['features.24.weight'])
+dct['down3.mpconv.1.conv.0.bias'].data.copy_(dctvgg['features.24.bias'])
+dct['down3.mpconv.1.conv.1.weight'].data.copy_(dctvgg['features.25.weight'])#
+dct['down3.mpconv.1.conv.1.bias'].data.copy_(dctvgg['features.25.bias'])
+dct['down3.mpconv.1.conv.1.running_mean'].data.copy_(dctvgg['features.25.running_mean'])#
+dct['down3.mpconv.1.conv.1.running_var'].data.copy_(dctvgg['features.25.running_var'])
+
+dct['down3.mpconv.1.conv.3.weight'].data.copy_(dctvgg['features.27.weight'])
+dct['down3.mpconv.1.conv.3.bias'].data.copy_(dctvgg['features.27.bias'])
+dct['down3.mpconv.1.conv.4.weight'].data.copy_(dctvgg['features.28.weight'])#
+dct['down3.mpconv.1.conv.4.bias'].data.copy_(dctvgg['features.28.bias'])
+dct['down3.mpconv.1.conv.4.running_mean'].data.copy_(dctvgg['features.28.running_mean'])#
+dct['down3.mpconv.1.conv.4.running_var'].data.copy_(dctvgg['features.28.running_var'])
+
+dct['down3.mpconv.1.conv.6.weight'].data.copy_(dctvgg['features.30.weight'])
+dct['down3.mpconv.1.conv.6.bias'].data.copy_(dctvgg['features.30.bias'])
+dct['down3.mpconv.1.conv.7.weight'].data.copy_(dctvgg['features.31.weight'])#
+dct['down3.mpconv.1.conv.7.bias'].data.copy_(dctvgg['features.31.bias'])
+dct['down3.mpconv.1.conv.7.running_mean'].data.copy_(dctvgg['features.31.running_mean'])#
+dct['down3.mpconv.1.conv.7.running_var'].data.copy_(dctvgg['features.31.running_var'])
+
+
+dct['down4.mpconv.1.conv.0.weight'].data.copy_(dctvgg['features.34.weight'])
+dct['down4.mpconv.1.conv.0.bias'].data.copy_(dctvgg['features.34.bias'])
+dct['down4.mpconv.1.conv.1.weight'].data.copy_(dctvgg['features.35.weight'])#
+dct['down4.mpconv.1.conv.1.bias'].data.copy_(dctvgg['features.35.bias'])
+dct['down4.mpconv.1.conv.1.running_mean'].data.copy_(dctvgg['features.35.running_mean'])#
+dct['down4.mpconv.1.conv.1.running_var'].data.copy_(dctvgg['features.35.running_var'])
+
+dct['down4.mpconv.1.conv.3.weight'].data.copy_(dctvgg['features.37.weight'])
+dct['down4.mpconv.1.conv.3.bias'].data.copy_(dctvgg['features.37.bias'])
+dct['down4.mpconv.1.conv.4.weight'].data.copy_(dctvgg['features.38.weight'])#
+dct['down4.mpconv.1.conv.4.bias'].data.copy_(dctvgg['features.38.bias'])
+dct['down4.mpconv.1.conv.4.running_mean'].data.copy_(dctvgg['features.38.running_mean'])#
+dct['down4.mpconv.1.conv.4.running_var'].data.copy_(dctvgg['features.38.running_var'])
+
+dct['down4.mpconv.1.conv.6.weight'].data.copy_(dctvgg['features.40.weight'])
+dct['down4.mpconv.1.conv.6.bias'].data.copy_(dctvgg['features.40.bias'])
+dct['down4.mpconv.1.conv.7.weight'].data.copy_(dctvgg['features.41.weight'])#
+dct['down4.mpconv.1.conv.7.bias'].data.copy_(dctvgg['features.41.bias'])
+dct['down4.mpconv.1.conv.7.running_mean'].data.copy_(dctvgg['features.41.running_mean'])#
+dct['down4.mpconv.1.conv.7.running_var'].data.copy_(dctvgg['features.41.running_var']);
+
+
 model.load_state_dict(dct)
 
 

@@ -96,7 +96,7 @@ class DiscriminativeLoss(_Loss):
         for i in range(instances.shape[1]):
             st = torch.nonzero(instances[0,i,:,:])
             if len(st) > 0:
-                sample_pt = st[np.random.randint(0,len(st),size=max(1,int(((100-5*epoch)/100)*len(st))))]
+                sample_pt = st[np.random.randint(0,len(st),size=max(1,int(((100-3*epoch)/100)*len(st))))]
                 collection.append(result[:,i,sample_pt[:,0],sample_pt[:,1]].sum(dim=1)/(instances[0,i,sample_pt[:,0],sample_pt[:,1]].sum()+self.eps))
             else:
                 collection.append(torch.zeros(img.shape[0]).float().cuda())
